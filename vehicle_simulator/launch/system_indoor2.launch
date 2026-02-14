@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="namespace_1" default="vehicle2"/>
+  <arg name="vehicleX1" default="6.0"/>
+  <arg name="vehicleY1" default="0"/>
+  <arg name="terrainZ1" default="0"/>
+  <arg name="vehicleYaw1" default="0"/>
+
+  <arg name="world_name" default="indoor"/>
+  <arg name="vehicleHeight" default="0.75"/>
+  <arg name="cameraOffsetZ" default="0"/>
+  <arg name="checkTerrainConn" default="true"/>
+
+  <arg name="paused" default="false"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="headless" default="false"/>
+  <arg name="debug" default="false"/>
+  <arg name="verbose" default="false"/>
+  <arg name="gui" default="true"/>
+
+  <include file="$(find vehicle_simulator)/launch/empty_world.launch">
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="headless" value="$(arg headless)"/>
+    <arg name="debug" value="$(arg debug)"/>
+    <arg name="verbose" value="$(arg verbose)"/>
+    <arg name="world_name" value="$(find vehicle_simulator)/world/$(arg world_name).world"/>
+  </include>
+
+
+  <group ns="$(arg namespace_1)">
+
+    <param name="camera_description" command="$(find xacro)/xacro --inorder '$(find vehicle_simulator)/urdf/camera.urdf.xacro'" />
+    <param name="lidar_description" command="$(find xacro)/xacro --inorder '$(find vehicle_simulator)/urdf/lidar.urdf.xacro'" />
+    <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find vehicle_simulator)/urdf/robot.urdf.xacro'" />
+
+    <node pkg="gazebo_ros" type="spawn_model" name="spawn_camera" args="-urdf -param /$(arg namespace_1)/camera_description -model $(arg namespace_1)/camera -x 6.0"/>
+    <node pkg="gazebo_ros" type="spawn_model" name="spawn_lidar" args="-urdf -param /$(arg namespace_1)/lidar_description -model $(arg namespace_1)/lidar -x 6.0"/>
+    <node pkg="gazebo_ros" type="spawn_model" name="spawn_robot" args="-urdf -param /$(arg namespace_1)/robot_description -model $(arg namespace_1)/robot -x 6.0"/>
+
+    <include file="$(find local_planner)/launch/local_planner.launch">
+      <arg name="cameraOffsetZ" value="$(arg cameraOffsetZ)"/>
+      <arg name="goalX" value="$(arg vehicleX1)"/>
+      <arg name="goalY" value="$(arg vehicleY1)"/>
+      <arg name="sensor_frame" default="$(arg namespace_1)/sensor"/>
+      <arg name="vehicle_frame" default="$(arg namespace_1)/vehicle"/>
+      <arg name="camera_frame" default="$(arg namespace_1)/camera"/>
+    </include>
+
+    <include file="$(find terrain_analysis)/launch/terrain_analysis.launch" />
+
+    <include file="$(find terrain_analysis_ext)/launch/terrain_analysis_ext.launch">
+      <arg name="checkTerrainConn" value="$(arg checkTerrainConn)"/>
+    </include>
+
+    <include file="$(find vehicle_simulator)/launch/vehicle_simulator.launch">
+      <arg name="vehicleHeight" value="$(arg vehicleHeight)"/>
+      <arg name="cameraOffsetZ" value="$(arg cameraOffsetZ)"/>
+      <arg name="vehicleX" value="$(arg vehicleX1)"/>
+      <arg name="vehicleY" value="$(arg vehicleY1)"/>
+      <arg name="terrainZ" value="$(arg terrainZ1)"/>
+      <arg name="vehicleYaw" value="$(arg vehicleYaw1)"/>
+      <arg name="sensor_frame" value="$(arg namespace_1)/sensor" />
+      <arg name="robot_model_name" value="$(arg namespace_1)/robot" />
+      <arg name="camera_model_name" value="$(arg namespace_1)/camera" />
+      <arg name="vehicle_frame" default="$(arg namespace_1)/vehicle"/>
+      <arg name="lidar_model_name" value="$(arg namespace_1)/lidar" />
+    </include>
+
+    <include file="$(find sensor_scan_generation)/launch/sensor_scan_generation.launch">
+      <arg name="sensor_scan_frame" value="$(arg namespace_1)/sensor_at_scan"/>
+    </include>
+
+    <include file="$(find visualization_tools)/launch/visualization_tools.launch">
+      <arg name="world_name" value="$(arg world_name)"/>
+    </include>
+
+    <node launch-prefix="nice" pkg="rviz" type="rviz" name="rvizGA" args="-d $(find vehicle_simulator)/rviz/$(arg namespace_1).rviz" respawn="true"/>
+
+    <!--include file="$(find ps3joy)/launch/ps3.launch" /-->
+
+  </group>
+
+</launch>

@@ -1,0 +1,106 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(vehicle_simulator)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_BUILD_TYPE Release)
+set(BUILD_STATIC_LIBS ON)
+set(BUILD_SHARED_LIBS OFF)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
+## Find catkin macros and libraries
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  std_msgs
+  sensor_msgs
+  pcl_ros
+  dislam_msgs
+)
+
+find_package(OpenCV REQUIRED)
+find_package(PCL REQUIRED)
+
+###################################
+## catkin specific configuration ##
+###################################
+
+catkin_package(
+  CATKIN_DEPENDS
+  roscpp
+  std_msgs
+  sensor_msgs
+  pcl_ros
+)
+
+###########
+## Build ##
+###########
+
+## Specify additional locations of header files
+## Your package locations should be listed before other locations
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
+  "${PROJECT_SOURCE_DIR}/include"
+  /usr/local/include # Location when using 'make system_install'
+  /usr/include       # More usual location (e.g. when installing using a package)
+)
+
+## Specify additional locations for library files
+link_directories(
+  /usr/local/lib # Location when using 'make system_install'
+  /usr/lib       # More usual location (e.g. when installing using a package)
+)
+
+## Declare executables
+add_executable(vehicleSimulator src/vehicleSimulator.cpp)
+
+## Specify libraries to link a library or executable target against
+target_link_libraries(vehicleSimulator ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
+
+## Declare executables
+add_executable(LIO_Publisher src/LIO_Publisher.cpp)
+
+## Specify libraries to link a library or executable target against
+target_link_libraries(LIO_Publisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
+
+## Declare executables
+add_executable(registered_scan_auto_filter_node src/registered_scan_auto_filter_node.cpp)
+
+## Specify libraries to link a library or executable target against
+target_link_libraries(registered_scan_auto_filter_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
+
+
+add_executable(transform_cloud_node src/transform_cloud_node.cpp)
+target_link_libraries(transform_cloud_node ${catkin_LIBRARIES})
+
+
+add_executable(distance_based_drift_publisher src/distance_based_drift_publisher.cpp)
+target_link_libraries(distance_based_drift_publisher ${catkin_LIBRARIES})
+
+
+install(TARGETS vehicleSimulator
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(DIRECTORY launch/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+)
+install(DIRECTORY log/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/log
+)
+install(DIRECTORY mesh/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/mesh
+)
+install(DIRECTORY rviz/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/rviz
+)
+install(DIRECTORY urdf/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/urdf
+)
+install(DIRECTORY world/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/world
+)

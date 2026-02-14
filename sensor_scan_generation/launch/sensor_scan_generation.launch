@@ -1,0 +1,8 @@
+<launch>
+
+  <arg name="sensor_scan_frame" default="sensor_at_scan"/>
+  <node pkg="sensor_scan_generation" type="sensorScanGeneration" name="sensorScanGeneration" output="screen" required="true">
+    <param name="sensor_scan_frame" type="string" value="$(arg sensor_scan_frame)" />
+  </node>
+
+</launch>

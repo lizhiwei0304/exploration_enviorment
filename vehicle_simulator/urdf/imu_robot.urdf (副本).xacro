@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<robot name="imu_bot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <link name="base_link">
+    <inertial>
+      <mass value="1.0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.1" iyy="0.1" izz="0.1" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.3 0.3 0.3"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <!-- IMU 插件放在 base_link 上 -->
+  <gazebo reference="base_link">
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <update_rate>200</update_rate>
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>1e-4</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>1e-4</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>1e-4</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>1e-3</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>1e-3</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>1e-3</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+      <plugin name="imu_plugin" filename="libgazebo_ros_imu.so">
+        <topic_name>imu/data</topic_name>
+        <frame_name>base_link</frame_name>
+        <body_name>base_link</body_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+</robot>
+

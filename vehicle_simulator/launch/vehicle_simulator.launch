@@ -1,0 +1,105 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="namespace" default="vehicle0" />
+  <arg name="sensorOffsetX" default="0" />
+  <arg name="sensorOffsetY" default="0" />
+  <arg name="vehicleHeight" default="0.75" />
+  <arg name="cameraOffsetZ" default="0" />
+
+
+  <arg name="vehicleX" default="0" />
+  <arg name="vehicleY" default="0" />
+  <arg name="vehicleZ" default="0" />
+  <arg name="terrainZ" default="0" />
+  <arg name="vehicleYaw" default="0" />
+
+  <arg name="terrainVoxelSize" default="0.05" />
+  <arg name="groundHeightThre" default="0.1" />
+  <arg name="adjustZ" default="true" />
+  <arg name="terrainRadiusZ" default="1.0" />
+  <arg name="minTerrainPointNumZ" default="5" />
+  <arg name="smoothRateZ" default="0.5" />
+  <arg name="adjustIncl" default="true" />
+  <arg name="terrainRadiusIncl" default="2.0" />
+  <arg name="minTerrainPointNumIncl" default="200" />
+  <arg name="smoothRateIncl" default="0.5" />
+  <arg name="InclFittingThre" default="0.2" />
+  <arg name="maxIncl" default="30.0" />
+
+  <arg name="sensor_frame" default="sensor" />
+  <arg name="robot_model_name" default="robot" />
+  <arg name="camera_model_name" default="camera" />
+  <arg name="lidar_model_name" default="lidar" />
+  <arg name="vehicle_frame" default="vehicle" />
+  <arg name="lidar_frame" default="velodyne" />
+
+  <node pkg="vehicle_simulator" type="vehicleSimulator" name="vehicleSimulator" output="screen"
+    required="true">
+    <param name="use_gazebo_time" type="bool" value="false" />
+    <param name="sensorOffsetX" value="$(arg sensorOffsetX)" />
+    <param name="sensorOffsetY" value="$(arg sensorOffsetY)" />
+    <param name="vehicleHeight" value="$(arg vehicleHeight)" />
+    <param name="cameraOffsetZ" value="$(arg cameraOffsetZ)" />
+    <param name="vehicleX" value="$(arg vehicleX)" />
+    <param name="vehicleY" value="$(arg vehicleY)" />
+    <param name="vehicleZ" value="$(arg vehicleZ)" />
+    <param name="terrainZ" value="$(arg terrainZ)" />
+    <param name="vehicleYaw" value="$(arg vehicleYaw)" />
+    <param name="terrainVoxelSize" value="$(arg terrainVoxelSize)" />
+    <param name="groundHeightThre" value="$(arg groundHeightThre)" />
+    <param name="adjustZ" value="$(arg adjustZ)" />
+    <param name="terrainRadiusZ" value="$(arg terrainRadiusZ)" />
+    <param name="minTerrainPointNumZ" value="$(arg minTerrainPointNumZ)" />
+    <param name="smoothRateZ" value="$(arg smoothRateZ)" />
+    <param name="adjustIncl" value="$(arg adjustIncl)" />
+    <param name="terrainRadiusIncl" value="$(arg terrainRadiusIncl)" />
+    <param name="minTerrainPointNumIncl" value="$(arg minTerrainPointNumIncl)" />
+    <param name="smoothRateIncl" value="$(arg smoothRateIncl)" />
+    <param name="InclFittingThre" value="$(arg InclFittingThre)" />
+    <param name="maxIncl" value="$(arg maxIncl)" />
+    <param name="sensor_frame" value="$(arg sensor_frame)" />
+    <param name="robot_model_name" value="$(arg robot_model_name)" />
+    <param name="camera_model_name" value="$(arg camera_model_name)" />
+    <param name="lidar_model_name" value="$(arg lidar_model_name)" />
+    <param name="vehicle_frame" value="$(arg vehicle_frame)" />
+    <param name="lidar_frame" value="$(arg lidar_frame)" />
+
+  </node>
+
+  <node pkg="vehicle_simulator" type="registered_scan_auto_filter_node"
+    name="registered_scan_auto_filter_node" output="screen"
+    required="true">
+    <param name="NameSpace" type="string" value="$(arg namespace)" />
+    <param name="odom_suffix" value="state_estimation_at_scan" />
+
+    <param name="radius_xy" value="1.0" />
+    <param name="z_min_rel" value="-3.0" />
+    <param name="z_max_rel" value="3.0" />
+
+    <param name="require_min_others" value="1" />
+    <param name="max_pose_age_sec" value="1.0" />
+
+    <param name="discovery_hz" value="10.0" />
+  </node>
+
+
+  <!-- <node pkg="vehicle_simulator" type="LIO_Publisher" name="LIO_Publisher" output="screen"
+  required="true">
+    <param name="NameSpace" type="string" value="$(arg namespace)" /> 
+    <param name="SensorName" type="string" value="sensor" /> 
+    <param name="dis_th" type="double" value="0.3" />
+  </node> -->
+
+  <!-- 启动 vehicle0 的点云变换器 -->
+  <!-- <node name="transform_cloud_node_$(arg namespace)" pkg="vehicle_simulator"
+  type="transform_cloud_node" output="screen">
+    <param name="robot_namespace" value="$(arg namespace)" />
+  </node>
+
+  <node name="distance_based_drift_publisher_$(arg namespace)" pkg="vehicle_simulator"
+    type="distance_based_drift_publisher" output="screen">
+    <param name="robot_namespace" value="$(arg namespace)" />
+  </node> -->
+
+</launch>

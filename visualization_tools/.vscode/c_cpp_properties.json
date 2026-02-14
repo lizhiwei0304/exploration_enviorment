@@ -1,0 +1,27 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/opt/ros/humble/include/**",
+        "/home/lee/envDocker/Mrcodes/mtare_ws/src/AUTO_DEVELOPMENT/velodyne_simulator/velodyne_gazebo_plugins/include/**",
+        "/home/lee/envDocker/Mrcodes/mtare_ws/src/AUTO_DEVELOPMENT/waypoint_rviz_plugin/include/**",
+        "/home/lee/envDocker/Mrcodes/mtare_ws/src/MUTARE_DEVELOPMENT/include/**",
+        "/home/lee/envDocker/Mrcodes/mtare_ws/src/V2V_Communication/changed_graph/include/**",
+        "/home/lee/envDocker/Mrcodes/mtare_ws/src/V2V_Communication/exploration_info_udp/include/**",
+        "/home/lee/envDocker/Mrcodes/mtare_ws/src/V2V_Communication/robot_trajectory/include/**",
+        "/home/lee/envDocker/Mrcodes/mtare_ws/src/loop_candidate/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

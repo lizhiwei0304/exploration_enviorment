@@ -1,0 +1,85 @@
+<launch>
+     <!-- =========================
+       Common params
+       ========================= -->
+     <arg name="odom_suffix" default="state_estimation_at_scan" />
+
+     <arg name="radius_xy" default="1.5" />
+     <arg name="z_min_rel" default="-3.0" />
+     <arg name="z_max_rel" default="3.0" />
+
+     <arg name="require_min_others" default="1" />
+     <arg name="max_pose_age_sec" default="1.0" />
+
+     <arg name="discovery_hz" default="10.0" />
+
+     <!-- 每个实例的 namespace -->
+     <arg name="namespace_0" default="vehicle0" />
+     <arg name="namespace_1" default="vehicle1" />
+     <arg name="namespace_2" default="vehicle2" />
+
+     <!-- =========================
+       vehicle0 group
+       ========================= -->
+     <group ns="$(arg namespace_0)">
+          <node pkg="vehicle_simulator" type="registered_scan_auto_filter_node"
+               name="registered_scan_auto_filter_node" output="screen" required="true">
+
+               <!-- 让节点内部知道自己的名字空间（用于提取 self_id / 拼 topic） -->
+               <param name="NameSpace" type="string" value="$(arg namespace_0)" />
+               <param name="odom_suffix" value="$(arg odom_suffix)" />
+
+               <param name="radius_xy" value="$(arg radius_xy)" />
+               <param name="z_min_rel" value="$(arg z_min_rel)" />
+               <param name="z_max_rel" value="$(arg z_max_rel)" />
+
+               <param name="require_min_others" value="$(arg require_min_others)" />
+               <param name="max_pose_age_sec" value="$(arg max_pose_age_sec)" />
+
+               <param name="discovery_hz" value="$(arg discovery_hz)" />
+          </node>
+     </group>
+
+     <!-- =========================
+       vehicle1 group
+       ========================= -->
+     <group ns="$(arg namespace_1)">
+          <node pkg="vehicle_simulator" type="registered_scan_auto_filter_node"
+               name="registered_scan_auto_filter_node" output="screen" required="true">
+
+               <param name="NameSpace" type="string" value="$(arg namespace_1)" />
+               <param name="odom_suffix" value="$(arg odom_suffix)" />
+
+               <param name="radius_xy" value="$(arg radius_xy)" />
+               <param name="z_min_rel" value="$(arg z_min_rel)" />
+               <param name="z_max_rel" value="$(arg z_max_rel)" />
+
+               <param name="require_min_others" value="$(arg require_min_others)" />
+               <param name="max_pose_age_sec" value="$(arg max_pose_age_sec)" />
+
+               <param name="discovery_hz" value="$(arg discovery_hz)" />
+          </node>
+     </group>
+
+     <!-- =========================
+       vehicle2 group
+       ========================= -->
+     <group ns="$(arg namespace_2)">
+          <node pkg="vehicle_simulator" type="registered_scan_auto_filter_node"
+               name="registered_scan_auto_filter_node" output="screen" required="true">
+
+               <param name="NameSpace" type="string" value="$(arg namespace_2)" />
+               <param name="odom_suffix" value="$(arg odom_suffix)" />
+
+               <param name="radius_xy" value="$(arg radius_xy)" />
+               <param name="z_min_rel" value="$(arg z_min_rel)" />
+               <param name="z_max_rel" value="$(arg z_max_rel)" />
+
+               <param name="require_min_others" value="$(arg require_min_others)" />
+               <param name="max_pose_age_sec" value="$(arg max_pose_age_sec)" />
+
+               <param name="discovery_hz" value="$(arg discovery_hz)" />
+          </node>
+     </group>
+
+</launch>
