@@ -1,8 +1,10 @@
 <launch>
 
-  <arg name="checkTerrainConn" default="false"/>
+  <arg name="checkTerrainConn" default="false" />
+  <arg name="namespace" default="vehicle0" />
 
-  <node pkg="terrain_analysis_ext" type="terrainAnalysisExt" name="terrainAnalysisExt" output="screen" required="true">
+  <node pkg="terrain_analysis_ext" type="terrainAnalysisExt" name="terrainAnalysisExt"
+    output="screen" required="true">
     <param name="scanVoxelSize" type="double" value="0.1" />
     <param name="decayTime" type="double" value="10.0" />
     <param name="noDecayDis" type="double" value="0" />
@@ -20,6 +22,23 @@
     <param name="terrainUnderVehicle" type="double" value="-0.75" />
     <param name="ceilingFilteringThre" type="double" value="2.0" />
     <param name="localTerrainMapRadius" type="double" value="4.0" />
+  </node>
+
+  <node pkg="terrain_analysis_ext" type="terrain_analysis_ext_auto_filter_node"
+    name="terrain_analysis_ext_auto_filter_node" output="screen">
+    <param name="NameSpace" type="string" value="$(arg namespace)" />
+    <param name="odom_suffix" value="state_estimation_at_scan" />
+
+    <param name="in_topic" value="terrain_map_ext" />
+    <param name="out_topic" value="terrain_map_ext_filted" />
+
+    <param name="radius_xy" value="1.5" />
+    <param name="z_min_rel" value="-1.0" />
+    <param name="z_max_rel" value="1.0" />
+
+    <param name="require_min_others" value="1" />
+    <param name="max_pose_age_sec" value="1.0" />
+    <param name="discovery_hz" value="10.0" />
   </node>
 
 </launch>

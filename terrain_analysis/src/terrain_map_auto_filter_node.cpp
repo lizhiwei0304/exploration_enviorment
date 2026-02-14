@@ -4,9 +4,11 @@
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/PointCloud2.h>
 
-#include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
+
+#include <Eigen/Dense>
 
 #include <regex>
 #include <thread>
@@ -15,13 +17,16 @@
 #include <unordered_set>
 #include <vector>
 #include <string>
+#include <atomic>
+#include <algorithm>
 
-class RegisteredScanAutoFilter
+class TerrainMapAutoFilter
 {
 public:
-  RegisteredScanAutoFilter(ros::NodeHandle &nh, ros::NodeHandle &pnh)
+  TerrainMapAutoFilter(ros::NodeHandle &nh, ros::NodeHandle &pnh)
       : nh_(nh), pnh_(pnh)
   {
+    // ========== params ==========
     odom_suffix_ = pnh_.param<std::string>("odom_suffix", "state_estimation_at_scan");
 
     radius_xy_ = pnh_.param<double>("radius_xy", 1.0);
@@ -29,7 +34,6 @@ public:
     z_max_rel_ = pnh_.param<double>("z_max_rel", 1.0);
 
     require_min_others_ = pnh_.param<int>("require_min_others", 1);
-
     max_pose_age_sec_ = pnh_.param<double>("max_pose_age_sec", 1.0);
 
     namespace_ = pnh_.param<std::string>("NameSpace", "vehicle0");
@@ -41,20 +45,25 @@ public:
       ROS_WARN_STREAM("[Init] Use fallback param self_id = " << self_id_);
     }
 
-    // discovery 频率
     discovery_hz_ = pnh_.param<double>("discovery_hz", 2.0);
 
-    // ---- pub/sub ----
-    pub_filtered_ = nh_.advertise<sensor_msgs::PointCloud2>("registered_scan_filted", 1);
+    // topics (可改成参数，但默认与你系统一致)
+    in_topic_ = pnh_.param<std::string>("in_topic", "terrain_map");
+    out_topic_ = pnh_.param<std::string>("out_topic", "terrain_map_filted");
 
-    sub_cloud_ = nh_.subscribe("registered_scan", 1, &RegisteredScanAutoFilter::cloudCb, this,
+    // ========== pub/sub ==========
+    pub_filtered_ = nh_.advertise<sensor_msgs::PointCloud2>(out_topic_, 1);
+
+    sub_cloud_ = nh_.subscribe(in_topic_, 1, &TerrainMapAutoFilter::cloudCb, this,
                                ros::TransportHints().tcpNoDelay(true));
 
-    // ---- start discovery thread ----
+    // ========== start discovery thread ==========
     running_.store(true);
-    discovery_thread_ = std::thread(&RegisteredScanAutoFilter::discoveryLoop, this);
+    discovery_thread_ = std::thread(&TerrainMapAutoFilter::discoveryLoop, this);
 
-    ROS_WARN_STREAM("[AutoFilter] started"
+    ROS_WARN_STREAM("[TerrainAutoFilter] started"
+                    << "\n  in_topic=" << in_topic_
+                    << "\n  out_topic=" << out_topic_
                     << "\n  odom_suffix=" << odom_suffix_
                     << "\n  self_id=" << self_id_
                     << "\n  radius_xy=" << radius_xy_ << " z_min_rel=" << z_min_rel_ << " z_max_rel=" << z_max_rel_
@@ -63,7 +72,7 @@ public:
                     << "\n  discovery_hz=" << discovery_hz_);
   }
 
-  ~RegisteredScanAutoFilter()
+  ~TerrainMapAutoFilter()
   {
     running_.store(false);
     if (discovery_thread_.joinable())
@@ -109,13 +118,13 @@ private:
 
         ros::Subscriber sub = nh_.subscribe<nav_msgs::Odometry>(
             t.name, 5,
-            boost::bind(&RegisteredScanAutoFilter::odomCb, this, _1, rid),
+            boost::bind(&TerrainMapAutoFilter::odomCb, this, _1, rid),
             ros::VoidConstPtr(),
             ros::TransportHints().tcpNoDelay(true));
 
         {
           std::lock_guard<std::mutex> lk(mtx_);
-          odom_subs_[t.name] = sub;
+          odom_subs_[t.name] = sub; // 保持生命周期
           poses_[rid] = PoseCache();
         }
 
@@ -143,7 +152,7 @@ private:
   // ============================ Cloud ============================
   void cloudCb(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
   {
-    // 1) 取其他机器人位置（Eigen::Vector3d）
+    // 1) gather other robot positions
     std::vector<Eigen::Vector3d> other_positions;
     {
       std::lock_guard<std::mutex> lk(mtx_);
@@ -173,14 +182,13 @@ private:
     if (require_min_others_ > 0 && static_cast<int>(other_positions.size()) < require_min_others_)
     {
       ROS_WARN_STREAM_THROTTLE(1.0,
-                               "[AutoFilter] BYPASS (no other poses): have=" << other_positions.size()
-                                                                             << " need>=" << require_min_others_);
-      // 原样发布
+                               "[TerrainAutoFilter] BYPASS (no other poses): have=" << other_positions.size()
+                                                                                    << " need>=" << require_min_others_);
       pub_filtered_.publish(*cloud_msg);
       return;
     }
 
-    // 2) cloud_msg -> pcl
+    // 2) PointCloud2 -> PCL (XYZI)
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::fromROSMsg(*cloud_msg, *cloud);
     if (!cloud || cloud->points.empty())
@@ -188,37 +196,25 @@ private:
 
     const size_t before_sz = cloud->points.size();
 
-    // 3) 过滤（圆柱+Z窗口）
+    // 3) filter by cylinders around other robots
     RemovePointsNearRobots(cloud, other_positions, radius_xy_, z_min_rel_, z_max_rel_);
 
     const size_t after_sz = cloud->points.size();
 
     ROS_WARN_STREAM_THROTTLE(0.5,
-                             "[AutoFilter] in=" << before_sz << " out=" << after_sz
-                                                << " removed=" << (before_sz > after_sz ? before_sz - after_sz : 0)
-                                                << " others=" << other_positions.size()
-                                                << " frame=" << cloud_msg->header.frame_id);
+                             "[TerrainAutoFilter] in=" << before_sz << " out=" << after_sz
+                                                       << " removed=" << (before_sz > after_sz ? before_sz - after_sz : 0)
+                                                       << " others=" << other_positions.size()
+                                                       << " frame=" << cloud_msg->header.frame_id);
 
-    // 4) pcl -> ROS msg publish
+    // 4) publish
     sensor_msgs::PointCloud2 out;
     pcl::toROSMsg(*cloud, out);
     out.header = cloud_msg->header;
     pub_filtered_.publish(out);
   }
 
-  int ExtractRobotIDFromNamespace(const std::string &ns)
-  {
-    int i = ns.size() - 1;
-    while (i >= 0 && std::isdigit(ns[i]))
-      --i;
-
-    if (i == static_cast<int>(ns.size()) - 1)
-      return -1; // 没有数字
-
-    return std::stoi(ns.substr(i + 1));
-  }
-
-  // ============================ Filtering function ============================
+  // ============================ Filtering ============================
   static void RemovePointsNearRobots(
       pcl::PointCloud<pcl::PointXYZI>::Ptr &cloud,
       const std::vector<Eigen::Vector3d> &other_robot_positions,
@@ -276,8 +272,6 @@ private:
   // 从 /vehicle12/state_estimation_at_scan 提取 12；失败返回 -1
   static int parseVehicleId(const std::string &topic)
   {
-    // 支持 /vehicle0/xxx 或 /robot_1/xxx：你可以按你系统改正则
-    // 这里先按 vehicle
     std::regex re("/vehicle([0-9]+)/");
     std::smatch m;
     if (std::regex_search(topic, m, re))
@@ -294,10 +288,22 @@ private:
     return -1;
   }
 
+  static int ExtractRobotIDFromNamespace(const std::string &ns)
+  {
+    int i = static_cast<int>(ns.size()) - 1;
+    while (i >= 0 && std::isdigit(ns[i]))
+      --i;
+
+    if (i == static_cast<int>(ns.size()) - 1)
+      return -1; // no digits
+
+    return std::stoi(ns.substr(i + 1));
+  }
+
 private:
   ros::NodeHandle nh_, pnh_;
 
-  std::string cloud_topic_;
+  std::string in_topic_;
   std::string out_topic_;
   std::string odom_suffix_;
   std::string namespace_;
@@ -319,23 +325,18 @@ private:
 
   std::mutex mtx_;
 
-  // 已订阅的话题集合：防止重复订阅
   std::unordered_set<std::string> subscribed_odom_topics_;
-
-  // 保存 subscriber，否则析构会退订
   std::unordered_map<std::string, ros::Subscriber> odom_subs_;
-
-  // rid -> pose cache
   std::unordered_map<int, PoseCache> poses_;
 };
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "registered_scan_auto_filter");
+  ros::init(argc, argv, "terrain_map_auto_filter");
   ros::NodeHandle nh;
   ros::NodeHandle pnh("~");
 
-  RegisteredScanAutoFilter node(nh, pnh);
+  TerrainMapAutoFilter node(nh, pnh);
   ros::spin();
   return 0;
 }

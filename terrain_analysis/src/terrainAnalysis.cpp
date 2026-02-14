@@ -239,8 +239,6 @@ int main(int argc, char **argv)
   ros::Subscriber subOdometry = nh.subscribe<nav_msgs::Odometry>("state_estimation", 5, odometryHandler);
 
   ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("registered_scan", 5, laserCloudHandler);
-  // ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("registered_scan_filted", 5, laserCloudHandler);
-
 
   ros::Subscriber subJoystick = nh.subscribe<sensor_msgs::Joy>("joy", 5, joystickHandler);
 
@@ -360,7 +358,7 @@ int main(int argc, char **argv)
         int indX = int((point.x - vehicleX + terrainVoxelSize / 2) / terrainVoxelSize) + terrainVoxelHalfWidth;
         int indY = int((point.y - vehicleY + terrainVoxelSize / 2) / terrainVoxelSize) + terrainVoxelHalfWidth;
 
-        // 如果是负半轴上，值应该减少1 
+        // 如果是负半轴上，值应该减少1
         if (point.x - vehicleX + terrainVoxelSize / 2 < 0)
           indX--;
         if (point.y - vehicleY + terrainVoxelSize / 2 < 0)
@@ -405,8 +403,7 @@ int main(int argc, char **argv)
              * 当前点云的时间与要处理的点云时间差小于阈值 decayTime，或者距离小于 noDecayDis
              * 此时不会清除距离外的点云，或者不在需要被清除的距离之内
              */
-            if (point.z - vehicleZ > minRelZ - disRatioZ * dis && point.z - vehicleZ < maxRelZ + disRatioZ * dis && (laserCloudTime - systemInitTime - point.intensity < decayTime 
-                || dis < noDecayDis) && !(dis < clearingDis && clearingCloud))
+            if (point.z - vehicleZ > minRelZ - disRatioZ * dis && point.z - vehicleZ < maxRelZ + disRatioZ * dis && (laserCloudTime - systemInitTime - point.intensity < decayTime || dis < noDecayDis) && !(dis < clearingDis && clearingCloud))
             {
               terrainVoxelCloudPtr->push_back(point);
             }
@@ -436,7 +433,7 @@ int main(int argc, char **argv)
         planarVoxelDyObs[i] = 0;
         planarPointElev[i].clear();
       }
-      
+
       int terrainCloudSize = terrainCloud->points.size();
       for (int i = 0; i < terrainCloudSize; i++)
       {
@@ -455,7 +452,7 @@ int main(int argc, char **argv)
 
         // 检测点的高度是不是在[minRelZ, maxRelZ]之间，然后检测[indX,indY]周围的3x3的体素网格，填充到planarPointElev
         if (point.z - vehicleZ > minRelZ && point.z - vehicleZ < maxRelZ)
-        { 
+        {
           // 3个体素
           for (int dX = -1; dX <= 1; dX++)
           {
@@ -569,7 +566,7 @@ int main(int argc, char **argv)
           a. 获取每个平面体素中保存的点的数量（planarPointElevSize）。
           b. 然后它会查找该平面体素内的最低点（高程最小的点）。
           c. 并将平面体素的高程设置为找到的最低点的高程。
-       */ 
+       */
       if (useSorting)
       {
         for (int i = 0; i < planarVoxelNum; i++)
@@ -700,7 +697,7 @@ int main(int argc, char **argv)
               bool edgeVoxel = false;
 
               /*对于每个可能的边缘体素，它查找其周围的体素，检查是否有比当前体素 planarVoxelEdge[i] 更小的
-               *planarVoxelEdge 值。如果没有找到这样的体素，说明该体素是边缘体素的外边缘，它将 planarVoxelEdge[i] 
+               *planarVoxelEdge 值。如果没有找到这样的体素，说明该体素是边缘体素的外边缘，它将 planarVoxelEdge[i]
                *递增
                */
               for (int dX = -1; dX <= 1; dX++)

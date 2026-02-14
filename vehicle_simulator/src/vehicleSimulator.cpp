@@ -127,7 +127,6 @@ pcl::VoxelGrid<pcl::PointXYZI> terrainDwzFilter;
 
 ros::Publisher *pubScanPointer = NULL;
 ros::Publisher *pubCorrectedScan = NULL;
-ros::Publisher pubImu;
 
 bool accel_initialized = false; // 初始两帧跳过计算
 double last_x = 0.0, last2_x = 0.0;
@@ -463,8 +462,6 @@ int main(int argc, char **argv)
 
   ros::Publisher pubScan = nh.advertise<sensor_msgs::PointCloud2>("registered_scan", 2);
   pubScanPointer = &pubScan;
-
-  pubImu = nh.advertise<sensor_msgs::Imu>("imu_data", 5);
 
   terrainDwzFilter.setLeafSize(terrainVoxelSize, terrainVoxelSize, terrainVoxelSize);
 

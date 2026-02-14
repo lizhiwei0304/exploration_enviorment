@@ -56,6 +56,14 @@ add_executable(terrainAnalysisExt src/terrainAnalysisExt.cpp)
 ## Specify libraries to link a library or executable target against
 target_link_libraries(terrainAnalysisExt ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 
+## Declare executables
+add_executable(terrain_analysis_ext_auto_filter_node src/terrain_map_ext_auto_filter_node.cpp)
+
+## Specify libraries to link a library or executable target against
+target_link_libraries(terrain_analysis_ext_auto_filter_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
+
+
+
 install(TARGETS terrainAnalysisExt
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
