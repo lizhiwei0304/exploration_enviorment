@@ -4,9 +4,11 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /TerrainMap1
+        - /TerrainMapExt1
         - /Axes1
       Splitter Ratio: 0.5147058963775635
-    Tree Height: 413
+    Tree Height: 871
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -21,7 +23,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: TerrainMap
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -118,7 +120,7 @@ Visualization Manager:
       Color: 255; 0; 0
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: true
       Max Color: 255; 255; 255
       Max Intensity: 0.10000000149011612
@@ -135,7 +137,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: false
       Autocompute Value Bounds:
@@ -146,7 +148,7 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 0; 0
-      Color Transformer: Intensity
+      Color Transformer: FlatColor
       Decay Time: 0
       Enabled: true
       Invert Rainbow: true
@@ -160,8 +162,8 @@ Visualization Manager:
       Selectable: true
       Size (Pixels): 4
       Size (m): 0.03999999910593033
-      Style: Points
-      Topic: /vehicle2/terrain_map_ext
+      Style: Flat Squares
+      Topic: /vehicle0/terrain_map_ext_filted
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -361,11 +363,29 @@ Visualization Manager:
         All Enabled: true
         map:
           Value: true
+        vehicle0/camera:
+          Value: true
         vehicle0/sensor:
+          Value: true
+        vehicle0/sensor_at_scan:
+          Value: true
+        vehicle0/vehicle:
+          Value: true
+        vehicle1/camera:
           Value: true
         vehicle1/sensor:
           Value: true
+        vehicle1/sensor_at_scan:
+          Value: true
+        vehicle1/vehicle:
+          Value: true
+        vehicle2/camera:
+          Value: true
         vehicle2/sensor:
+          Value: true
+        vehicle2/sensor_at_scan:
+          Value: true
+        vehicle2/vehicle:
           Value: true
       Marker Alpha: 1
       Marker Scale: 1
@@ -376,10 +396,25 @@ Visualization Manager:
       Tree:
         map:
           vehicle0/sensor:
+            vehicle0/camera:
+              {}
+            vehicle0/vehicle:
+              {}
+          vehicle0/sensor_at_scan:
             {}
           vehicle1/sensor:
+            vehicle1/camera:
+              {}
+            vehicle1/vehicle:
+              {}
+          vehicle1/sensor_at_scan:
             {}
           vehicle2/sensor:
+            vehicle2/camera:
+              {}
+            vehicle2/vehicle:
+              {}
+          vehicle2/sensor_at_scan:
             {}
       Update Interval: 0
       Value: true
@@ -407,7 +442,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 59.71697235107422
+      Distance: 21.47628402709961
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -415,9 +450,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.28547006845474243
-        Y: 6.132643699645996
-        Z: 2.909698009490967
+        X: 19.510334014892578
+        Y: 1.1944658756256104
+        Z: 9.316587448120117
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
@@ -425,17 +460,17 @@ Visualization Manager:
       Near Clip Distance: 0.009999999776482582
       Pitch: 1.5697963237762451
       Target Frame: vehicle
-      Yaw: 2.3872148990631104
+      Yaw: 2.7472188472747803
     Saved: ~
 Window Geometry:
   Displays:
-    collapsed: true
-  Height: 2422
-  Hide Left Dock: true
+    collapsed: false
+  Height: 1016
+  Hide Left Dock: false
   Hide Right Dock: false
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd000000040000000000000156000004fafc020000000bfb0000001200530065006c0065006300740069006f006e000000003d000001b8000000ab00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000abfb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073000000003b000004fa0000017800fffffffb0000000a0049006d00610067006502000007800000015500000280000001e0fb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000001400430061006d0065007200610049006e006900740100000474000000160000000000000000fb0000000a0049006d00610067006503000004000000035600000199000000fd000000010000010f000003a7fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d000003a70000012300fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073d0000003efc0100000002fb0000000800540069006d006500000000000000073d0000061c00fffffffb0000000800540069006d0065010000000000000450000000000000000000000800000008e400000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000040000000000000240000003a2fc020000000bfb0000001200530065006c0065006300740069006f006e000000003d000001b80000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000abfb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003b000003a2000000c700fffffffb0000000a0049006d00610067006502000007800000015500000280000001e0fb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000001400430061006d0065007200610049006e006900740100000474000000160000000000000000fb0000000a0049006d00610067006503000004000000035600000199000000fd000000010000010f000003a7fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d000003a7000000a000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073d0000003efc0100000002fb0000000800540069006d006500000000000000073d0000035c00fffffffb0000000800540069006d0065010000000000000450000000000000000000000770000003a200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -444,6 +479,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 2048
-  X: 2048
-  Y: 64
+  Width: 2486
+  X: 74
+  Y: 27

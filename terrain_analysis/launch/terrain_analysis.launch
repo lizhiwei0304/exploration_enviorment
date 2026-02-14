@@ -32,7 +32,7 @@
   </node>
 
 
-  <node pkg="terrain_analysis" type="terrain_map_auto_filter_node"
+  <!-- <node pkg="terrain_analysis" type="terrain_map_auto_filter_node"
     name="terrain_map_auto_filter_node" output="screen">
     <param name="NameSpace" type="string" value="$(arg namespace)" />
     <param name="odom_suffix" value="state_estimation_at_scan" />
@@ -41,12 +41,12 @@
     <param name="out_topic" value="terrain_map_filted" />
 
     <param name="radius_xy" value="1.5" />
-    <param name="z_min_rel" value="-1.0" />
-    <param name="z_max_rel" value="1.0" />
+    <param name="z_min_rel" value="-3.0" />
+    <param name="z_max_rel" value="3.0" />
 
     <param name="require_min_others" value="1" />
     <param name="max_pose_age_sec" value="1.0" />
     <param name="discovery_hz" value="10.0" />
-  </node>
+  </node> -->
 
 </launch>

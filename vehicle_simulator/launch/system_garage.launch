@@ -67,10 +67,13 @@
       <arg name="camera_frame" default="$(arg namespace_1)/camera" />
     </include>
 
-    <include file="$(find terrain_analysis)/launch/terrain_analysis.launch" />
+    <include file="$(find terrain_analysis)/launch/terrain_analysis.launch">
+      <arg name="namespace" value="$(arg namespace_1)" />
+    </include>
 
     <include file="$(find terrain_analysis_ext)/launch/terrain_analysis_ext.launch">
       <arg name="checkTerrainConn" value="$(arg checkTerrainConn)" />
+      <arg name="namespace" value="$(arg namespace_1)" />
     </include>
 
     <include file="$(find vehicle_simulator)/launch/vehicle_simulator.launch">
@@ -97,9 +100,6 @@
 
     <node launch-prefix="nice" pkg="rviz" type="rviz" name="rvizGA"
       args="-d $(find vehicle_simulator)/rviz/$(arg namespace_1).rviz" respawn="true" />
-
-    <!--include
-    file="$(find ps3joy)/launch/ps3.launch" /-->
 
   </group>
 
@@ -128,10 +128,13 @@
       <arg name="camera_frame" default="$(arg namespace_2)/camera" />
     </include>
 
-    <include file="$(find terrain_analysis)/launch/terrain_analysis.launch" />
+    <include file="$(find terrain_analysis)/launch/terrain_analysis.launch">
+      <arg name="namespace" value="$(arg namespace_2)" />
+    </include>
 
     <include file="$(find terrain_analysis_ext)/launch/terrain_analysis_ext.launch">
       <arg name="checkTerrainConn" value="$(arg checkTerrainConn)" />
+      <arg name="namespace" value="$(arg namespace_2)" />
     </include>
 
     <include file="$(find vehicle_simulator)/launch/vehicle_simulator.launch">
@@ -158,9 +161,6 @@
 
     <node launch-prefix="nice" pkg="rviz" type="rviz" name="rvizGA"
       args="-d $(find vehicle_simulator)/rviz/$(arg namespace_2).rviz" respawn="true" />
-
-    <!--include
-    file="$(find ps3joy)/launch/ps3.launch" /-->
 
   </group>
 
@@ -190,10 +190,13 @@
       <arg name="camera_frame" default="$(arg namespace_3)/camera" />
     </include>
 
-    <include file="$(find terrain_analysis)/launch/terrain_analysis.launch" />
+    <include file="$(find terrain_analysis)/launch/terrain_analysis.launch">
+      <arg name="namespace" value="$(arg namespace_3)" />
+    </include>
 
     <include file="$(find terrain_analysis_ext)/launch/terrain_analysis_ext.launch">
       <arg name="checkTerrainConn" value="$(arg checkTerrainConn)" />
+      <arg name="namespace" value="$(arg namespace_3)" />
     </include>
 
     <include file="$(find vehicle_simulator)/launch/vehicle_simulator.launch">
