@@ -75,7 +75,6 @@
       <arg name="lidar_model_name" value="$(arg namespace_1)/lidar" />
       <arg name="vehicle_frame" value="$(arg namespace_1)/vehicle" />
       <arg name="lidar_frame" value="$(arg namespace_1)/velodyne" />
-      <arg name="namespace" default="$(arg namespace_1)" />
     </include>
 
     <include file="$(find sensor_scan_generation)/launch/sensor_scan_generation.launch">
@@ -140,7 +139,7 @@
       <arg name="lidar_model_name" value="$(arg namespace_2)/lidar" />
       <arg name="vehicle_frame" value="$(arg namespace_2)/vehicle" />
       <arg name="lidar_frame" value="$(arg namespace_2)/velodyne" />
-      <arg name="namespace" default="$(arg namespace_2)" />
+
     </include>
 
     <include file="$(find sensor_scan_generation)/launch/sensor_scan_generation.launch">
@@ -204,7 +203,6 @@
       <arg name="lidar_model_name" value="$(arg namespace_3)/lidar" />
       <arg name="vehicle_frame" value="$(arg namespace_3)/vehicle" />
       <arg name="lidar_frame" value="$(arg namespace_3)/velodyne" />
-      <arg name="namespace" default="$(arg namespace_3)" />
     </include>
 
     <include file="$(find sensor_scan_generation)/launch/sensor_scan_generation.launch">
