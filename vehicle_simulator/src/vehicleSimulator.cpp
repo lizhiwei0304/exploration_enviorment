@@ -5,6 +5,7 @@
 #include <random>
 
 #include <ros/ros.h>
+#include <ros/this_node.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -60,6 +61,24 @@ double cameraOffsetZ = 0;         // 相机z轴方向偏离距离
 double sensorOffsetX = 0;         // 雷达传感器x轴方向偏离距离
 double sensorOffsetY = 0;         // 雷达传感器y轴方向偏离距离
 double vehicleHeight = 0.75;      // 车辆的高度
+bool publishIMU = true;
+bool lidarYawWithVehicle = true;
+bool publishStateEstimation = true;
+bool publishStateTF = true;
+bool publishRegisteredScan = true;
+double gravityNorm = 9.80665;
+double imuGyroNoiseStd = 0.0;
+double imuAccelNoiseStd = 0.0;
+double imuGyroBiasX = 0.0;
+double imuGyroBiasY = 0.0;
+double imuGyroBiasZ = 0.0;
+double imuAccelBiasX = 0.0;
+double imuAccelBiasY = 0.0;
+double imuAccelBiasZ = 0.0;
+double imuTimeOffset = 0.0;
+double imuOrientationCov = 1e-6;
+double imuAngularVelCov = 1e-6;
+double imuLinearAccelCov = 1e-4;
 double terrainVoxelSize = 0.05;   // 地形体素网格大小
 double groundHeightThre = 0.1;    // 地面高度距离阈值
 bool adjustZ = false;             // Z轴调整标志，主要用于地形识别后的平滑
@@ -122,6 +141,9 @@ std::string camera_model_name;
 std::string lidar_model_name;
 std::string vehicle_frame;
 std::string lidar_frame;
+std::string imu_topic = "imu/data";
+std::string imu_frame;
+std::string resolved_imu_frame;
 
 pcl::VoxelGrid<pcl::PointXYZI> terrainDwzFilter;
 
@@ -140,8 +162,162 @@ std::default_random_engine rand_gen;
 std::normal_distribution<double> noise_gyro(0.0, 0.0005); // 角速度噪声 std=0.005 rad/s
 std::normal_distribution<double> noise_accel(0.0, 0.001); // 加速度噪声 std=0.001 m/s^2
 
+bool imuInitialized = false;
+double lastImuX = 0.0, lastImuY = 0.0, lastImuZ = 0.0;
+double lastImuVx = 0.0, lastImuVy = 0.0, lastImuVz = 0.0;
+tf::Quaternion lastImuQuat(0.0, 0.0, 0.0, 1.0);
+
+double sampleGaussianNoise(double stddev)
+{
+  if (stddev <= 0.0)
+    return 0.0;
+  std::normal_distribution<double> noise(0.0, stddev);
+  return noise(rand_gen);
+}
+
+void setDiagonalCovariance(boost::array<double, 9> &covariance, double value)
+{
+  for (int i = 0; i < 9; i++)
+    covariance[i] = 0.0;
+  covariance[0] = value;
+  covariance[4] = value;
+  covariance[8] = value;
+}
+
+std::string stripLeadingSlash(const std::string &name)
+{
+  size_t first = name.find_first_not_of('/');
+  if (first == std::string::npos)
+    return "";
+  return name.substr(first);
+}
+
+std::string currentNamespaceNoSlash()
+{
+  std::string ns = ros::this_node::getNamespace();
+  size_t first = ns.find_first_not_of('/');
+  if (first == std::string::npos)
+    return "";
+
+  size_t last = ns.find_last_not_of('/');
+  return ns.substr(first, last - first + 1);
+}
+
+std::string resolveFrameWithCurrentNamespace(const std::string &frame)
+{
+  const bool explicitGlobalFrame = !frame.empty() && frame[0] == '/';
+  std::string normalizedFrame = stripLeadingSlash(frame);
+  if (normalizedFrame.empty() || explicitGlobalFrame)
+    return normalizedFrame;
+
+  std::string ns = currentNamespaceNoSlash();
+  if (ns.empty())
+    return normalizedFrame;
+
+  if (normalizedFrame == ns || normalizedFrame.rfind(ns + "/", 0) == 0)
+    return normalizedFrame;
+
+  if (normalizedFrame.find('/') != std::string::npos)
+    return normalizedFrame;
+
+  return ns + "/" + normalizedFrame;
+}
+
+tf::Vector3 computeBodyAngularVelocity(const tf::Quaternion &lastQuat, const tf::Quaternion &currentQuat, double deltaTime)
+{
+  if (deltaTime <= 1e-6)
+    return tf::Vector3(0.0, 0.0, 0.0);
+
+  tf::Quaternion deltaQuat = lastQuat.inverse() * currentQuat;
+  deltaQuat.normalize();
+
+  if (deltaQuat.w() < 0.0)
+    deltaQuat = tf::Quaternion(-deltaQuat.x(), -deltaQuat.y(), -deltaQuat.z(), -deltaQuat.w());
+
+  const double sinHalfAngle = sqrt(deltaQuat.x() * deltaQuat.x() +
+                                   deltaQuat.y() * deltaQuat.y() +
+                                   deltaQuat.z() * deltaQuat.z());
+  if (sinHalfAngle < 1e-9)
+    return tf::Vector3(0.0, 0.0, 0.0);
+
+  const double angle = 2.0 * atan2(sinHalfAngle, deltaQuat.w());
+  tf::Vector3 axis(deltaQuat.x() / sinHalfAngle,
+                   deltaQuat.y() / sinHalfAngle,
+                   deltaQuat.z() / sinHalfAngle);
+  return axis * (angle / deltaTime);
+}
+
+void publishImuData(const ros::Publisher &pubImu,
+                    const ros::Time &stamp,
+                    const tf::Quaternion &imuQuat,
+                    double imuX,
+                    double imuY,
+                    double imuZ,
+                    double deltaTime)
+{
+  if (!publishIMU)
+    return;
+
+  sensor_msgs::Imu imuMsg;
+  imuMsg.header.stamp = stamp + ros::Duration(imuTimeOffset);
+  imuMsg.header.frame_id = resolved_imu_frame;
+  tf::quaternionTFToMsg(imuQuat, imuMsg.orientation);
+
+  tf::Vector3 gyro(0.0, 0.0, 0.0);
+  tf::Vector3 linearAccWorld(0.0, 0.0, 0.0);
+
+  if (imuInitialized && deltaTime > 1e-6)
+  {
+    const double vx = (imuX - lastImuX) / deltaTime;
+    const double vy = (imuY - lastImuY) / deltaTime;
+    const double vz = (imuZ - lastImuZ) / deltaTime;
+
+    linearAccWorld.setX((vx - lastImuVx) / deltaTime);
+    linearAccWorld.setY((vy - lastImuVy) / deltaTime);
+    linearAccWorld.setZ((vz - lastImuVz) / deltaTime);
+
+    lastImuVx = vx;
+    lastImuVy = vy;
+    lastImuVz = vz;
+
+    gyro = computeBodyAngularVelocity(lastImuQuat, imuQuat, deltaTime);
+  }
+  else
+  {
+    lastImuVx = 0.0;
+    lastImuVy = 0.0;
+    lastImuVz = 0.0;
+    imuInitialized = true;
+  }
+
+  lastImuX = imuX;
+  lastImuY = imuY;
+  lastImuZ = imuZ;
+  lastImuQuat = imuQuat;
+
+  tf::Vector3 gravityWorld(0.0, 0.0, -gravityNorm);
+  tf::Vector3 specificForceBody = tf::Matrix3x3(imuQuat).inverse() * (linearAccWorld - gravityWorld);
+
+  imuMsg.angular_velocity.x = gyro.x() + imuGyroBiasX + sampleGaussianNoise(imuGyroNoiseStd);
+  imuMsg.angular_velocity.y = gyro.y() + imuGyroBiasY + sampleGaussianNoise(imuGyroNoiseStd);
+  imuMsg.angular_velocity.z = gyro.z() + imuGyroBiasZ + sampleGaussianNoise(imuGyroNoiseStd);
+
+  imuMsg.linear_acceleration.x = specificForceBody.x() + imuAccelBiasX + sampleGaussianNoise(imuAccelNoiseStd);
+  imuMsg.linear_acceleration.y = specificForceBody.y() + imuAccelBiasY + sampleGaussianNoise(imuAccelNoiseStd);
+  imuMsg.linear_acceleration.z = specificForceBody.z() + imuAccelBiasZ + sampleGaussianNoise(imuAccelNoiseStd);
+
+  setDiagonalCovariance(imuMsg.orientation_covariance, imuOrientationCov);
+  setDiagonalCovariance(imuMsg.angular_velocity_covariance, imuAngularVelCov);
+  setDiagonalCovariance(imuMsg.linear_acceleration_covariance, imuLinearAccelCov);
+
+  pubImu.publish(imuMsg);
+}
+
 void scanHandler(const sensor_msgs::PointCloud2::ConstPtr &scanIn)
 {
+  if (!publishRegisteredScan)
+    return;
+
   // 当系统未初始化
   if (!systemInited)
   {
@@ -194,10 +370,23 @@ void scanHandler(const sensor_msgs::PointCloud2::ConstPtr &scanIn)
     terrainRecPitch = terrainPitchStack[odomRecIDPointer];
   }
 
-  float sinTerrainRecRoll = sin(terrainRecRoll);
-  float cosTerrainRecRoll = cos(terrainRecRoll);
-  float sinTerrainRecPitch = sin(terrainRecPitch);
-  float cosTerrainRecPitch = cos(terrainRecPitch);
+  float scanRoll = terrainRecRoll;
+  float scanPitch = terrainRecPitch;
+  float scanYaw = 0.0;
+
+  if (lidarYawWithVehicle)
+  {
+    scanRoll = vehicleRecRoll;
+    scanPitch = vehicleRecPitch;
+    scanYaw = vehicleRecYaw;
+  }
+
+  float sinScanRoll = sin(scanRoll);
+  float cosScanRoll = cos(scanRoll);
+  float sinScanPitch = sin(scanPitch);
+  float cosScanPitch = cos(scanPitch);
+  float sinScanYaw = sin(scanYaw);
+  float cosScanYaw = cos(scanYaw);
 
   scanData->clear();
   pcl::fromROSMsg(*scanIn, *scanData);
@@ -219,18 +408,22 @@ void scanHandler(const sensor_msgs::PointCloud2::ConstPtr &scanIn)
     // === 坐标变换 ===
     // 绕 x 轴旋转地面 Roll 角
     float pointX1 = pt_in.x;
-    float pointY1 = pt_in.y * cosTerrainRecRoll - pt_in.z * sinTerrainRecRoll;
-    float pointZ1 = pt_in.y * sinTerrainRecRoll + pt_in.z * cosTerrainRecRoll;
+    float pointY1 = pt_in.y * cosScanRoll - pt_in.z * sinScanRoll;
+    float pointZ1 = pt_in.y * sinScanRoll + pt_in.z * cosScanRoll;
 
     // 绕 y 轴旋转地面 Pitch 角
-    float pointX2 = pointX1 * cosTerrainRecPitch + pointZ1 * sinTerrainRecPitch;
+    float pointX2 = pointX1 * cosScanPitch + pointZ1 * sinScanPitch;
     float pointY2 = pointY1;
-    float pointZ2 = -pointX1 * sinTerrainRecPitch + pointZ1 * cosTerrainRecPitch;
+    float pointZ2 = -pointX1 * sinScanPitch + pointZ1 * cosScanPitch;
+
+    float pointX3 = pointX2 * cosScanYaw - pointY2 * sinScanYaw;
+    float pointY3 = pointX2 * sinScanYaw + pointY2 * cosScanYaw;
+    float pointZ3 = pointZ2;
 
     // 平移至车辆位置
-    pt_out.x = pointX2 + vehicleRecX;
-    pt_out.y = pointY2 + vehicleRecY;
-    pt_out.z = pointZ2 + vehicleRecZ;
+    pt_out.x = pointX3 + vehicleRecX;
+    pt_out.y = pointY3 + vehicleRecY;
+    pt_out.z = pointZ3 + vehicleRecZ;
 
     // === 保留原始属性 ===
     pt_out.intensity = pt_in.intensity;
@@ -245,7 +438,8 @@ void scanHandler(const sensor_msgs::PointCloud2::ConstPtr &scanIn)
   pcl::toROSMsg(*scanDataXYZIRT, scanData2);
   scanData2.header.stamp = ros::Time().fromSec(odomRecTime);
   scanData2.header.frame_id = "map";
-  pubScanPointer->publish(scanData2);
+  if (pubScanPointer != NULL)
+    pubScanPointer->publish(scanData2);
 }
 
 void terrainCloudHandler(const sensor_msgs::PointCloud2ConstPtr &terrainCloud2)
@@ -412,6 +606,24 @@ int main(int argc, char **argv)
   nhPrivate.getParam("sensorOffsetX", sensorOffsetX);
   nhPrivate.getParam("sensorOffsetY", sensorOffsetY);
   nhPrivate.getParam("vehicleHeight", vehicleHeight);
+  nhPrivate.getParam("publish_imu", publishIMU);
+  nhPrivate.getParam("publish_state_estimation", publishStateEstimation);
+  nhPrivate.getParam("publish_state_tf", publishStateTF);
+  nhPrivate.getParam("publish_registered_scan", publishRegisteredScan);
+  nhPrivate.getParam("lidarYawWithVehicle", lidarYawWithVehicle);
+  nhPrivate.getParam("gravity", gravityNorm);
+  nhPrivate.getParam("imu_gyro_noise_std", imuGyroNoiseStd);
+  nhPrivate.getParam("imu_accel_noise_std", imuAccelNoiseStd);
+  nhPrivate.getParam("imu_gyro_bias_x", imuGyroBiasX);
+  nhPrivate.getParam("imu_gyro_bias_y", imuGyroBiasY);
+  nhPrivate.getParam("imu_gyro_bias_z", imuGyroBiasZ);
+  nhPrivate.getParam("imu_accel_bias_x", imuAccelBiasX);
+  nhPrivate.getParam("imu_accel_bias_y", imuAccelBiasY);
+  nhPrivate.getParam("imu_accel_bias_z", imuAccelBiasZ);
+  nhPrivate.getParam("imu_time_offset", imuTimeOffset);
+  nhPrivate.getParam("imu_orientation_cov", imuOrientationCov);
+  nhPrivate.getParam("imu_angular_velocity_cov", imuAngularVelCov);
+  nhPrivate.getParam("imu_linear_acceleration_cov", imuLinearAccelCov);
   nhPrivate.getParam("vehicleX", vehicleX);
   nhPrivate.getParam("vehicleY", vehicleY);
   nhPrivate.getParam("vehicleZ", vehicleZ);
@@ -434,6 +646,11 @@ int main(int argc, char **argv)
   nhPrivate.getParam("lidar_model_name", lidar_model_name);
   nhPrivate.getParam("vehicle_frame", vehicle_frame);
   nhPrivate.getParam("lidar_frame", lidar_frame);
+  nhPrivate.getParam("imu_topic", imu_topic);
+  nhPrivate.getParam("imu_frame", imu_frame);
+  if (imu_frame.empty())
+    imu_frame = lidar_frame;
+  resolved_imu_frame = resolveFrameWithCurrentNamespace(imu_frame);
 
   ros::Subscriber subScan = nh.subscribe<sensor_msgs::PointCloud2>("velodyne_points", 2, scanHandler);
 
@@ -441,7 +658,8 @@ int main(int argc, char **argv)
 
   ros::Subscriber subSpeed = nh.subscribe<geometry_msgs::TwistStamped>("cmd_vel", 5, speedHandler);
 
-  ros::Publisher pubVehicleOdom = nh.advertise<nav_msgs::Odometry>("state_estimation", 5);
+  ros::Publisher pubVehicleOdom = nh.advertise<nav_msgs::Odometry>("state_estimation1", 5);
+  ros::Publisher pubImu = nh.advertise<sensor_msgs::Imu>(imu_topic, 200);
 
   nav_msgs::Odometry odomData;
   odomData.header.frame_id = "map";
@@ -473,28 +691,37 @@ int main(int argc, char **argv)
   {
     ros::spinOnce();
 
+    ros::Time odomTimeRec = odomTime;
+    odomTime = ros::Time::now();
+    if (odomTime.toSec() <= odomTimeRec.toSec())
+      odomTime = odomTimeRec + ros::Duration(dt);
+
+    double deltaTime = dt;
+    if (odomTimeRec.toSec() > 0.0)
+    {
+      deltaTime = (odomTime - odomTimeRec).toSec();
+      if (deltaTime <= 1e-6 || deltaTime > 0.1)
+        deltaTime = dt;
+    }
+    const double invDeltaTime = 1.0 / deltaTime;
+
     float vehicleRecRoll = vehicleRoll;
     float vehicleRecPitch = vehiclePitch;
     float vehicleRecZ = vehicleZ;
 
     vehicleRoll = terrainRoll * cos(vehicleYaw) + terrainPitch * sin(vehicleYaw);
     vehiclePitch = -terrainRoll * sin(vehicleYaw) + terrainPitch * cos(vehicleYaw);
-    vehicleYaw += 0.005 * vehicleYawRate;
+    vehicleYaw += deltaTime * vehicleYawRate;
     if (vehicleYaw > PI)
       vehicleYaw -= 2 * PI;
     else if (vehicleYaw < -PI)
       vehicleYaw += 2 * PI;
 
-    vehicleX += 0.005 * cos(vehicleYaw) * vehicleSpeed +
-                0.005 * vehicleYawRate * (-sin(vehicleYaw) * sensorOffsetX - cos(vehicleYaw) * sensorOffsetY);
-    vehicleY += 0.005 * sin(vehicleYaw) * vehicleSpeed +
-                0.005 * vehicleYawRate * (cos(vehicleYaw) * sensorOffsetX - sin(vehicleYaw) * sensorOffsetY);
+    vehicleX += deltaTime * cos(vehicleYaw) * vehicleSpeed +
+                deltaTime * vehicleYawRate * (-sin(vehicleYaw) * sensorOffsetX - cos(vehicleYaw) * sensorOffsetY);
+    vehicleY += deltaTime * sin(vehicleYaw) * vehicleSpeed +
+                deltaTime * vehicleYawRate * (cos(vehicleYaw) * sensorOffsetX - sin(vehicleYaw) * sensorOffsetY);
     vehicleZ = terrainZ + vehicleHeight;
-
-    ros::Time odomTimeRec = odomTime;
-    odomTime = ros::Time::now();
-    if (odomTime == odomTimeRec)
-      odomTime += ros::Duration(0.005);
 
     odomSendIDPointer = (odomSendIDPointer + 1) % stackNum;
     odomTimeStack[odomSendIDPointer] = odomTime.toSec();
@@ -508,42 +735,55 @@ int main(int argc, char **argv)
     terrainPitchStack[odomSendIDPointer] = terrainPitch;
 
     // publish 200Hz odometry messages
-    geometry_msgs::Quaternion geoQuat = tf::createQuaternionMsgFromRollPitchYaw(vehicleRoll, vehiclePitch, vehicleYaw);
+    tf::Quaternion vehicleQuat;
+    vehicleQuat.setRPY(vehicleRoll, vehiclePitch, vehicleYaw);
+    geometry_msgs::Quaternion vehicleGeoQuat;
+    tf::quaternionTFToMsg(vehicleQuat, vehicleGeoQuat);
 
     odomData.header.stamp = odomTime;
-    odomData.pose.pose.orientation = geoQuat;
+    odomData.pose.pose.orientation = vehicleGeoQuat;
     odomData.pose.pose.position.x = vehicleX;
     odomData.pose.pose.position.y = vehicleY;
     odomData.pose.pose.position.z = vehicleZ;
-    odomData.twist.twist.angular.x = 200.0 * (vehicleRoll - vehicleRecRoll);   // 200 是0.005秒的倒数
-    odomData.twist.twist.angular.y = 200.0 * (vehiclePitch - vehicleRecPitch); // 200 是0.005秒的倒数
+    odomData.twist.twist.angular.x = invDeltaTime * (vehicleRoll - vehicleRecRoll);
+    odomData.twist.twist.angular.y = invDeltaTime * (vehiclePitch - vehicleRecPitch);
     odomData.twist.twist.angular.z = vehicleYawRate;
     odomData.twist.twist.linear.x = vehicleSpeed;
-    odomData.twist.twist.linear.z = 200.0 * (vehicleZ - vehicleRecZ); // 200 是0.005秒的倒数
-    pubVehicleOdom.publish(odomData);
+    odomData.twist.twist.linear.z = invDeltaTime * (vehicleZ - vehicleRecZ);
+    if (publishStateEstimation)
+      pubVehicleOdom.publish(odomData);
 
     // publish 200Hz tf messages
     odomTrans.stamp_ = odomTime;
-    odomTrans.setRotation(tf::Quaternion(geoQuat.x, geoQuat.y, geoQuat.z, geoQuat.w));
+    odomTrans.setRotation(vehicleQuat);
     odomTrans.setOrigin(tf::Vector3(vehicleX, vehicleY, vehicleZ));
-    tfBroadcaster.sendTransform(odomTrans);
+    if (publishStateTF)
+      tfBroadcaster.sendTransform(odomTrans);
+
+    tf::Quaternion lidarQuat;
+    if (lidarYawWithVehicle)
+      lidarQuat = vehicleQuat;
+    else
+      lidarQuat.setRPY(terrainRoll, terrainPitch, 0.0);
+    geometry_msgs::Quaternion lidarGeoQuat;
+    tf::quaternionTFToMsg(lidarQuat, lidarGeoQuat);
+
+    publishImuData(pubImu, odomTime, lidarQuat, vehicleX, vehicleY, vehicleZ, deltaTime);
 
     // publish 200Hz Gazebo model state messages (this is for Gazebo simulation)
-    cameraState.pose.orientation = geoQuat;
+    cameraState.pose.orientation = vehicleGeoQuat;
     cameraState.pose.position.x = vehicleX;
     cameraState.pose.position.y = vehicleY;
     cameraState.pose.position.z = vehicleZ + cameraOffsetZ;
     pubModelState.publish(cameraState);
 
-    robotState.pose.orientation = geoQuat;
+    robotState.pose.orientation = vehicleGeoQuat;
     robotState.pose.position.x = vehicleX;
     robotState.pose.position.y = vehicleY;
     robotState.pose.position.z = vehicleZ;
     pubModelState.publish(robotState);
 
-    geoQuat = tf::createQuaternionMsgFromRollPitchYaw(terrainRoll, terrainPitch, 0);
-
-    lidarState.pose.orientation = geoQuat;
+    lidarState.pose.orientation = lidarGeoQuat;
     lidarState.pose.position.x = vehicleX;
     lidarState.pose.position.y = vehicleY;
     lidarState.pose.position.z = vehicleZ;
