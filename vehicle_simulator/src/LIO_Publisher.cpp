@@ -237,13 +237,14 @@ void LIO_Pub::OdomCallback(nav_msgs::Odometry msg)
     output.header.stamp = msg.header.stamp;
     submapMsg.keyframePC = output;
 
-    submapMsg.pose.position.x = tx;
-    submapMsg.pose.position.y = ty;
-    submapMsg.pose.position.z = tz;
-    submapMsg.pose.orientation.x = qx;
-    submapMsg.pose.orientation.y = qy;
-    submapMsg.pose.orientation.z = qz;
-    submapMsg.pose.orientation.w = qw;
+    submapMsg.pose = msg.pose;
+    submapMsg.pose.pose.position.x = tx;
+    submapMsg.pose.pose.position.y = ty;
+    submapMsg.pose.pose.position.z = tz;
+    submapMsg.pose.pose.orientation.x = qx;
+    submapMsg.pose.pose.orientation.y = qy;
+    submapMsg.pose.pose.orientation.z = qz;
+    submapMsg.pose.pose.orientation.w = qw;
 
     subMapPublisher_.publish(submapMsg);
     pointCloudPublisher_.publish(output);
