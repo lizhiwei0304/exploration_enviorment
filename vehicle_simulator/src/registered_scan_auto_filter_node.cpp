@@ -260,7 +260,7 @@ private:
 
     filtered->width = static_cast<uint32_t>(filtered->points.size());
     filtered->height = 1;
-    filtered->is_dense = false;
+    filtered->is_dense = true;
 
     cloud.swap(filtered);
   }

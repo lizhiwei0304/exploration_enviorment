@@ -270,6 +270,8 @@ void GazeboRosVelodyneLaser::OnScan(ConstLaserScanStampedPtr& _msg)
 
   const double yDiff = maxAngle.Radian() - minAngle.Radian();
   const double pDiff = verticalMaxAngle.Radian() - verticalMinAngle.Radian();
+  const double updateRate = parent_ray_sensor_->UpdateRate();
+  const double scanPeriod = updateRate > 0.0 ? 1.0 / updateRate : 0.1;
 
   const double MIN_RANGE = std::max(min_range_, minRange);
   const double MAX_RANGE = std::min(max_range_, maxRange);
@@ -310,6 +312,7 @@ void GazeboRosVelodyneLaser::OnScan(ConstLaserScanStampedPtr& _msg)
   int i, j;
   uint8_t *ptr = msg.data.data();
   for (i = 0; i < rangeCount; i++) {
+    const float pointTime = rangeCount > 1 ? scanPeriod * static_cast<float>(i) / static_cast<float>(rangeCount - 1) : 0.0f;
     for (j = 0; j < verticalRangeCount; j++) {
 
       // Range
@@ -352,7 +355,7 @@ void GazeboRosVelodyneLaser::OnScan(ConstLaserScanStampedPtr& _msg)
         *((float*)(ptr + 8)) = r * sin(pAngle); // z
         *((float*)(ptr + 12)) = intensity; // intensity
         *((uint16_t*)(ptr + 16)) = j; // ring
-        *((float*)(ptr + 18)) = 0.0; // time
+        *((float*)(ptr + 18)) = pointTime; // time
         ptr += POINT_STEP;
       } else if (organize_cloud_) {
         *((float*)(ptr + 0)) = nanf(""); // x
@@ -360,7 +363,7 @@ void GazeboRosVelodyneLaser::OnScan(ConstLaserScanStampedPtr& _msg)
         *((float*)(ptr + 8)) = nanf(""); // x
         *((float*)(ptr + 12)) = nanf(""); // intensity
         *((uint16_t*)(ptr + 16)) = j; // ring
-        *((float*)(ptr + 18)) = 0.0; // time
+        *((float*)(ptr + 18)) = pointTime; // time
         ptr += POINT_STEP;
       }
     }
@@ -376,9 +379,9 @@ void GazeboRosVelodyneLaser::OnScan(ConstLaserScanStampedPtr& _msg)
     msg.row_step = POINT_STEP * msg.width;
     msg.is_dense = false;
   } else {
-    msg.width = 1;
-    msg.height = msg.data.size() / POINT_STEP;
-    msg.row_step = msg.data.size();
+    msg.width = msg.data.size() / POINT_STEP;
+    msg.height = 1;
+    msg.row_step = POINT_STEP * msg.width;
     msg.is_dense = true;
   }
 
