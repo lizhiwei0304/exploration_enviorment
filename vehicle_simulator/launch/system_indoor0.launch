@@ -88,9 +88,9 @@
       <arg name="publish_state_tf" value="false" />
       <arg name="publish_registered_scan" value="false" />
       <arg name="use_loam_interface" value="true" />
-      <arg name="slam_backend" value="liosam" />
-      <arg name="slam_state_topic" value="/lio_sam/mapping/odometry" />
-      <arg name="slam_cloud_topic" value="/lio_sam/mapping/cloud_registered" />
+      <arg name="slam_backend" value="fastlio" />
+      <arg name="slam_state_topic" value="/$(arg namespace_1)/Odometry" />
+      <arg name="slam_cloud_topic" value="/$(arg namespace_1)/cloud_registered" />
       <arg name="slam_output_child_frame" value="$(arg namespace_1)/sensor" />
     </include>
 
