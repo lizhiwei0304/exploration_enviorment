@@ -44,8 +44,8 @@
       <arg name="cameraOffsetZ" value="$(arg cameraOffsetZ)"/>
       <arg name="goalX" value="$(arg vehicleX1)"/>
       <arg name="goalY" value="$(arg vehicleY1)"/>
-      <arg name="localPlannerRate" value="5.0"/>
-      <arg name="pathFollowerRate" value="5.0"/>
+      <arg name="localPlannerRate" value="100.0"/>
+      <arg name="pathFollowerRate" value="100.0"/>
       <arg name="pathFollowerPubSkipNum" value="0"/>
       <arg name="sensor_frame" default="$(arg namespace_1)/sensor"/>
       <arg name="vehicle_frame" default="$(arg namespace_1)/vehicle"/>
