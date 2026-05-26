@@ -56,6 +56,7 @@
     </include>
 
     <include file="$(find vehicle_simulator)/launch/vehicle_simulator.launch">
+      <arg name="namespace" value="$(arg namespace_1)" />
       <arg name="vehicleHeight" value="$(arg vehicleHeight)"/>
       <arg name="cameraOffsetZ" value="$(arg cameraOffsetZ)"/>
       <arg name="vehicleX" value="$(arg vehicleX1)"/>
@@ -68,6 +69,14 @@
       <arg name="lidar_model_name" value="$(arg namespace_1)/lidar" />
       <arg name="vehicle_frame" value="$(arg namespace_1)/vehicle" />
       <arg name="lidar_frame" value="$(arg namespace_1)/velodyne" />
+      <arg name="publish_state_estimation" value="false" />
+      <arg name="publish_state_tf" value="false" />
+      <arg name="publish_registered_scan" value="false" />
+      <arg name="use_loam_interface" value="true" />
+      <arg name="slam_backend" value="liosam" />
+      <arg name="slam_state_topic" value="/lio_sam/mapping/odometry" />
+      <arg name="slam_cloud_topic" value="/lio_sam/mapping/cloud_registered" />
+      <arg name="slam_output_child_frame" value="$(arg namespace_1)/sensor" />
     </include>
 
     <include file="$(find sensor_scan_generation)/launch/sensor_scan_generation.launch">
