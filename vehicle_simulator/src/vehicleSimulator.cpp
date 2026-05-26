@@ -66,6 +66,7 @@ bool lidarYawWithVehicle = true;
 bool publishStateEstimation = true;
 bool publishStateTF = true;
 bool publishRegisteredScan = true;
+double cmdVelTimeout = 0.0;
 double gravityNorm = 9.80665;
 double imuGyroNoiseStd = 0.0;
 double imuAccelNoiseStd = 0.0;
@@ -117,6 +118,7 @@ float vehicleYaw = 0;   // 车辆Yaw角
 
 float vehicleYawRate = 0; // 车辆Yaw角变化率
 float vehicleSpeed = 0;   // 车辆速度
+ros::Time lastCmdVelTime;
 
 float terrainZ = 0;     // 地面z轴高度
 float terrainRoll = 0;  // 地面Roll角
@@ -593,6 +595,7 @@ void speedHandler(const geometry_msgs::TwistStamped::ConstPtr &speedIn)
 {
   vehicleSpeed = speedIn->twist.linear.x;    // 获取速度
   vehicleYawRate = speedIn->twist.angular.z; // 获取角速度
+  lastCmdVelTime = ros::Time::now();
 }
 
 int main(int argc, char **argv)
@@ -610,6 +613,7 @@ int main(int argc, char **argv)
   nhPrivate.getParam("publish_state_estimation", publishStateEstimation);
   nhPrivate.getParam("publish_state_tf", publishStateTF);
   nhPrivate.getParam("publish_registered_scan", publishRegisteredScan);
+  nhPrivate.getParam("cmd_vel_timeout", cmdVelTimeout);
   nhPrivate.getParam("lidarYawWithVehicle", lidarYawWithVehicle);
   nhPrivate.getParam("gravity", gravityNorm);
   nhPrivate.getParam("imu_gyro_noise_std", imuGyroNoiseStd);
@@ -704,6 +708,12 @@ int main(int argc, char **argv)
         deltaTime = dt;
     }
     const double invDeltaTime = 1.0 / deltaTime;
+    if (cmdVelTimeout > 0.0 && lastCmdVelTime.toSec() > 0.0 &&
+        (ros::Time::now() - lastCmdVelTime).toSec() > cmdVelTimeout)
+    {
+      vehicleSpeed = 0.0;
+      vehicleYawRate = 0.0;
+    }
 
     float vehicleRecRoll = vehicleRoll;
     float vehicleRecPitch = vehiclePitch;

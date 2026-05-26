@@ -46,6 +46,7 @@
       <arg name="goalY" value="$(arg vehicleY1)"/>
       <arg name="localPlannerRate" value="5.0"/>
       <arg name="pathFollowerRate" value="5.0"/>
+      <arg name="pathFollowerPubSkipNum" value="0"/>
       <arg name="sensor_frame" default="$(arg namespace_1)/sensor"/>
       <arg name="vehicle_frame" default="$(arg namespace_1)/vehicle"/>
       <arg name="camera_frame" default="$(arg namespace_1)/camera"/>
@@ -65,12 +66,15 @@
       <arg name="vehicleY" value="$(arg vehicleY1)"/>
       <arg name="terrainZ" value="$(arg terrainZ1)"/>
       <arg name="vehicleYaw" value="$(arg vehicleYaw1)"/>
+      <arg name="adjustZ" value="false"/>
+      <arg name="adjustIncl" value="false"/>
       <arg name="sensor_frame" value="$(arg namespace_1)/sensor" />
       <arg name="robot_model_name" value="$(arg namespace_1)/robot" />
       <arg name="camera_model_name" value="$(arg namespace_1)/camera" />
       <arg name="lidar_model_name" value="$(arg namespace_1)/lidar" />
       <arg name="vehicle_frame" value="$(arg namespace_1)/vehicle" />
       <arg name="lidar_frame" value="$(arg namespace_1)/velodyne" />
+      <arg name="cmd_vel_timeout" value="1.0" />
       <arg name="publish_state_estimation" value="false" />
       <arg name="publish_state_tf" value="false" />
       <arg name="publish_registered_scan" value="false" />

@@ -37,6 +37,7 @@
   <arg name="publish_state_estimation" default="true" />
   <arg name="publish_state_tf" default="true" />
   <arg name="publish_registered_scan" default="true" />
+  <arg name="cmd_vel_timeout" default="0.0" />
 
   <arg name="use_loam_interface" default="false" />
   <arg name="slam_backend" default="fastlio" />
@@ -55,6 +56,7 @@
     <param name="publish_state_estimation" type="bool" value="$(arg publish_state_estimation)" />
     <param name="publish_state_tf" type="bool" value="$(arg publish_state_tf)" />
     <param name="publish_registered_scan" type="bool" value="$(arg publish_registered_scan)" />
+    <param name="cmd_vel_timeout" type="double" value="$(arg cmd_vel_timeout)" />
     <param name="imu_topic" type="string" value="imu/data" />
     <param name="imu_frame" type="string" value="$(arg lidar_frame)" />
     <param name="lidarYawWithVehicle" type="bool" value="true" />

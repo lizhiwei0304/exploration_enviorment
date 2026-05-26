@@ -12,6 +12,7 @@
   <arg name="goalY" default="0"/>
   <arg name="localPlannerRate" default="100.0"/>
   <arg name="pathFollowerRate" default="100.0"/>
+  <arg name="pathFollowerPubSkipNum" default="1"/>
 
   <arg name="sensor_frame" default="sensor"/>
   <arg name="vehicle_frame" default="vehicle"/>
@@ -64,7 +65,7 @@
   <node pkg="local_planner" type="pathFollower" name="pathFollower" output="screen" required="true">
     <param name="sensorOffsetX" value="$(arg sensorOffsetX)" />
     <param name="sensorOffsetY" value="$(arg sensorOffsetY)" />
-    <param name="pubSkipNum" type="int" value="1" />
+    <param name="pubSkipNum" type="int" value="$(arg pathFollowerPubSkipNum)" />
     <param name="twoWayDrive" value="$(arg twoWayDrive)" />
     <param name="lookAheadDis" type="double" value="0.5" />
     <param name="yawRateGain" type="double" value="7.5" />
