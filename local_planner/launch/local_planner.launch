@@ -10,6 +10,8 @@
   <arg name="joyToSpeedDelay" default="2.0"/>
   <arg name="goalX" default="0"/>
   <arg name="goalY" default="0"/>
+  <arg name="localPlannerRate" default="100.0"/>
+  <arg name="pathFollowerRate" default="100.0"/>
 
   <arg name="sensor_frame" default="sensor"/>
   <arg name="vehicle_frame" default="vehicle"/>
@@ -56,6 +58,7 @@
     <param name="goalClearRange" type="double" value="0.5" />
     <param name="goalX" type="double" value="$(arg goalX)" />
     <param name="goalY" type="double" value="$(arg goalY)" />
+    <param name="loopRate" type="double" value="$(arg localPlannerRate)" />
   </node>
 
   <node pkg="local_planner" type="pathFollower" name="pathFollower" output="screen" required="true">
@@ -87,6 +90,7 @@
     <param name="autonomyMode" value="$(arg autonomyMode)" />
     <param name="autonomySpeed" value="$(arg autonomySpeed)" />
     <param name="joyToSpeedDelay" value="$(arg joyToSpeedDelay)" />
+    <param name="loopRate" type="double" value="$(arg pathFollowerRate)" />
   </node>
 
   <node pkg="tf" type="static_transform_publisher" name="vehicleTransPublisher" args="-$(arg sensorOffsetX) -$(arg sensorOffsetY) 0 0 0 0 /$(arg sensor_frame) /$(arg vehicle_frame) 1000"/>

@@ -75,6 +75,7 @@ double joyToCheckObstacleDelay = 5.0;
 double goalClearRange = 0.5;
 double goalX = 0;
 double goalY = 0;
+double loopRate = 100.0;
 
 float joySpeed = 0;
 float joySpeedRaw = 0;
@@ -600,6 +601,9 @@ int main(int argc, char **argv)
   nhPrivate.getParam("goalClearRange", goalClearRange);
   nhPrivate.getParam("goalX", goalX);
   nhPrivate.getParam("goalY", goalY);
+  nhPrivate.getParam("loopRate", loopRate);
+  if (loopRate <= 0.0)
+    loopRate = 100.0;
 
   ros::Subscriber subOdometry = nh.subscribe<nav_msgs::Odometry>("state_estimation", 5, odometryHandler);
 
@@ -671,7 +675,7 @@ int main(int argc, char **argv)
 
   printf("\nInitialization complete.\n\n");
 
-  ros::Rate rate(100);
+  ros::Rate rate(loopRate);
   bool status = ros::ok();
   while (status)
   {

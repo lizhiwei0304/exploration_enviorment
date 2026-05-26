@@ -59,6 +59,7 @@ bool noRotAtGoal = true;
 bool autonomyMode = false;
 double autonomySpeed = 1.0;
 double joyToSpeedDelay = 2.0;
+double loopRate = 100.0;
 
 float joySpeed = 0;
 float joySpeedRaw = 0;
@@ -225,6 +226,10 @@ int main(int argc, char **argv)
   nhPrivate.getParam("autonomyMode", autonomyMode);
   nhPrivate.getParam("autonomySpeed", autonomySpeed);
   nhPrivate.getParam("joyToSpeedDelay", joyToSpeedDelay);
+  nhPrivate.getParam("loopRate", loopRate);
+  if (loopRate <= 0.0)
+    loopRate = 100.0;
+  const double accelStep = maxAccel / loopRate;
 
   ros::Subscriber subOdom = nh.subscribe<nav_msgs::Odometry>("state_estimation", 5, odomHandler);
 
@@ -250,7 +255,7 @@ int main(int argc, char **argv)
       joySpeed = 1.0;
   }
 
-  ros::Rate rate(100);
+  ros::Rate rate(loopRate);
   bool status = ros::ok();
   while (status)
   {
@@ -321,7 +326,7 @@ int main(int argc, char **argv)
         joySpeed2 *= -1;
       }
 
-      if (fabs(vehicleSpeed) < 2.0 * maxAccel / 100.0)
+      if (fabs(vehicleSpeed) < 2.0 * accelStep)
         vehicleYawRate = -stopYawRateGain * dirDiff;
       else
         vehicleYawRate = -yawRateGain * dirDiff;
@@ -358,16 +363,16 @@ int main(int argc, char **argv)
       if (fabs(dirDiff) < dirDiffThre && dis > stopDisThre)
       {
         if (vehicleSpeed < joySpeed3)
-          vehicleSpeed += maxAccel / 100.0;
+          vehicleSpeed += accelStep;
         else if (vehicleSpeed > joySpeed3)
-          vehicleSpeed -= maxAccel / 100.0;
+          vehicleSpeed -= accelStep;
       }
       else
       {
         if (vehicleSpeed > 0)
-          vehicleSpeed -= maxAccel / 100.0;
+          vehicleSpeed -= accelStep;
         else if (vehicleSpeed < 0)
-          vehicleSpeed += maxAccel / 100.0;
+          vehicleSpeed += accelStep;
       }
 
       if (odomTime < stopInitTime + stopTime && stopInitTime > 0)
@@ -385,7 +390,7 @@ int main(int argc, char **argv)
       if (pubSkipCount < 0)
       {
         cmd_vel.header.stamp = ros::Time().fromSec(odomTime);
-        if (fabs(vehicleSpeed) <= maxAccel / 100.0)
+        if (fabs(vehicleSpeed) <= accelStep)
           cmd_vel.twist.linear.x = 0.2;
         else
           cmd_vel.twist.linear.x = vehicleSpeed;
