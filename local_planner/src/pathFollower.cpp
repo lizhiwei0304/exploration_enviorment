@@ -233,7 +233,7 @@ int main(int argc, char **argv)
 
   ros::Subscriber subOdom = nh.subscribe<nav_msgs::Odometry>("state_estimation", 5, odomHandler);
 
-  ros::Subscriber subPath = nh.subscribe<nav_msgs::Path>("path", 5, pathHandler);
+  ros::Subscriber subPath = nh.subscribe<nav_msgs::Path>("local_path", 5, pathHandler);
 
   ros::Subscriber subJoystick = nh.subscribe<sensor_msgs::Joy>("joy", 5, joystickHandler);
 

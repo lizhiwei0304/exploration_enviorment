@@ -623,14 +623,14 @@ int main(int argc, char **argv)
 
   ros::Subscriber subCheckObstacle = nh.subscribe<std_msgs::Bool>("check_obstacle", 5, checkObstacleHandler);
 
-  ros::Publisher pubPath = nh.advertise<nav_msgs::Path>("path", 5);
+  ros::Publisher pubPath = nh.advertise<nav_msgs::Path>("local_path", 5);
   nav_msgs::Path path;
 
 #if PLOTPATHSET == 1
   ros::Publisher pubFreePaths = nh.advertise<sensor_msgs::PointCloud2>("free_paths", 2);
 #endif
 
-  // ros::Publisher pubLaserCloud = nh.advertise<sensor_msgs::PointCloud2> ("/stacked_scans", 2);
+  ros::Publisher pubLaserCloud = nh.advertise<sensor_msgs::PointCloud2> ("planner_cloud_crop", 2);
 
   printf("\nReading path files.\n");
 
@@ -1078,11 +1078,11 @@ int main(int argc, char **argv)
 #endif
       }
 
-      /*sensor_msgs::PointCloud2 plannerCloud2;
+      sensor_msgs::PointCloud2 plannerCloud2;
       pcl::toROSMsg(*plannerCloudCrop, plannerCloud2);
       plannerCloud2.header.stamp = ros::Time().fromSec(odomTime);
       plannerCloud2.header.frame_id = vehicle_frame;
-      pubLaserCloud.publish(plannerCloud2);*/
+      pubLaserCloud.publish(plannerCloud2);
     }
 
     status = ros::ok();
