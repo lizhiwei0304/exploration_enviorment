@@ -1,12 +1,33 @@
 <launch>
 
+  <arg name="backend" default="loam" />
+  <arg name="robot_namespace" default="" />
+
+  <arg name="state_topic" default="" />
+  <arg name="cloud_topic" default="" />
+  <arg name="output_odom_topic" default="" />
+  <arg name="output_cloud_topic" default="" />
+
+  <arg name="output_frame" default="map" />
+  <arg name="output_child_frame" default="" />
+
+  <arg name="send_tf" default="true" />
+  <arg name="reverse_tf" default="false" />
+
   <node pkg="loam_interface" type="loamInterface" name="loamInterface" output="screen" required="true">
-    <param name="stateEstimationTopic" type="string" value="/integrated_to_init" />
-    <param name="registeredScanTopic" type="string" value="/velodyne_cloud_registered" />
-    <param name="flipStateEstimation" type="bool" value="true" />
-    <param name="flipRegisteredScan" type="bool" value="true" />
-    <param name="sendTF" type="bool" value="true" />
-    <param name="reverseTF" type="bool" value="false" />
+    <param name="backend" type="string" value="$(arg backend)" />
+    <param name="robotNamespace" type="string" value="$(arg robot_namespace)" />
+
+    <param name="stateTopic" type="string" value="$(arg state_topic)" />
+    <param name="cloudTopic" type="string" value="$(arg cloud_topic)" />
+    <param name="outputOdometryTopic" type="string" value="$(arg output_odom_topic)" />
+    <param name="outputCloudTopic" type="string" value="$(arg output_cloud_topic)" />
+
+    <param name="outputFrame" type="string" value="$(arg output_frame)" />
+    <param name="outputChildFrame" type="string" value="$(arg output_child_frame)" />
+
+    <param name="sendTF" type="bool" value="$(arg send_tf)" />
+    <param name="reverseTF" type="bool" value="$(arg reverse_tf)" />
   </node>
 
 </launch>

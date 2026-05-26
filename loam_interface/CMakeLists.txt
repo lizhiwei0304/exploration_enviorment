@@ -8,10 +8,14 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
+  geometry_msgs
+  message_filters
+  nav_msgs
   roscpp
   std_msgs
   sensor_msgs
   pcl_ros
+  tf
 )
 
 find_package(PCL REQUIRED)
@@ -22,10 +26,14 @@ find_package(PCL REQUIRED)
 
 catkin_package(
   CATKIN_DEPENDS
+  geometry_msgs
+  message_filters
+  nav_msgs
   roscpp
   std_msgs
   sensor_msgs
   pcl_ros
+  tf
 )
 
 ###########

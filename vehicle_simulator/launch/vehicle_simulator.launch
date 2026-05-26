@@ -34,6 +34,16 @@
   <arg name="vehicle_frame" default="vehicle" />
   <arg name="lidar_frame" default="velodyne" />
 
+  <arg name="publish_state_estimation" default="true" />
+  <arg name="publish_state_tf" default="true" />
+  <arg name="publish_registered_scan" default="true" />
+
+  <arg name="use_loam_interface" default="false" />
+  <arg name="slam_backend" default="fastlio" />
+  <arg name="slam_state_topic" default="" />
+  <arg name="slam_cloud_topic" default="" />
+  <arg name="slam_output_child_frame" default="" />
+
   <node pkg="vehicle_simulator" type="vehicleSimulator" name="vehicleSimulator" output="screen"
     required="true">
     <param name="use_gazebo_time" type="bool" value="false" />
@@ -42,6 +52,9 @@
     <param name="vehicleHeight" value="$(arg vehicleHeight)" />
     <param name="cameraOffsetZ" value="$(arg cameraOffsetZ)" />
     <param name="publish_imu" type="bool" value="true" />
+    <param name="publish_state_estimation" type="bool" value="$(arg publish_state_estimation)" />
+    <param name="publish_state_tf" type="bool" value="$(arg publish_state_tf)" />
+    <param name="publish_registered_scan" type="bool" value="$(arg publish_registered_scan)" />
     <param name="imu_topic" type="string" value="imu/data" />
     <param name="imu_frame" type="string" value="$(arg lidar_frame)" />
     <param name="lidarYawWithVehicle" type="bool" value="true" />
@@ -71,6 +84,14 @@
     <param name="lidar_frame" value="$(arg lidar_frame)" />
 
   </node>
+
+  <include if="$(arg use_loam_interface)" file="$(find loam_interface)/launch/loam_interface.launch">
+    <arg name="backend" value="$(arg slam_backend)" />
+    <arg name="robot_namespace" value="$(arg namespace)" />
+    <arg name="state_topic" value="$(arg slam_state_topic)" />
+    <arg name="cloud_topic" value="$(arg slam_cloud_topic)" />
+    <arg name="output_child_frame" value="$(arg slam_output_child_frame)" />
+  </include>
 
   <node pkg="vehicle_simulator" type="registered_scan_auto_filter_node"
     name="registered_scan_auto_filter_node" output="screen"
