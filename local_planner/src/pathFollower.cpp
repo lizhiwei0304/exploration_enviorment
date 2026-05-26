@@ -391,7 +391,7 @@ int main(int argc, char **argv)
       {
         cmd_vel.header.stamp = ros::Time().fromSec(odomTime);
         if (fabs(vehicleSpeed) <= accelStep)
-          cmd_vel.twist.linear.x = 0.2;
+          cmd_vel.twist.linear.x = 0.0;
         else
           cmd_vel.twist.linear.x = vehicleSpeed;
 
