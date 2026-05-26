@@ -75,6 +75,15 @@
       <arg name="vehicle_frame" value="$(arg namespace_1)/vehicle" />
       <arg name="lidar_frame" value="$(arg namespace_1)/velodyne" />
       <arg name="cmd_vel_timeout" value="1.0" />
+      <arg name="imu_gyro_noise_std" value="0.0" />
+      <arg name="imu_accel_noise_std" value="0.0" />
+      <arg name="imu_gyro_bias_x" value="0.0" />
+      <arg name="imu_gyro_bias_y" value="0.0" />
+      <arg name="imu_gyro_bias_z" value="0.0" />
+      <arg name="imu_accel_bias_x" value="0.0" />
+      <arg name="imu_accel_bias_y" value="0.0" />
+      <arg name="imu_accel_bias_z" value="0.0" />
+      <arg name="imu_time_offset" value="0.0" />
       <arg name="publish_state_estimation" value="false" />
       <arg name="publish_state_tf" value="false" />
       <arg name="publish_registered_scan" value="false" />

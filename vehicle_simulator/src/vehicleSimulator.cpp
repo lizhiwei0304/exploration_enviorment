@@ -161,8 +161,8 @@ const double dt2_inv = 1.0 / (dt * dt); // 二阶差分系数
 
 // 用于模拟高斯白噪声
 std::default_random_engine rand_gen;
-std::normal_distribution<double> noise_gyro(0.0, 0.0005); // 角速度噪声 std=0.005 rad/s
-std::normal_distribution<double> noise_accel(0.0, 0.001); // 加速度噪声 std=0.001 m/s^2
+std::normal_distribution<double> noise_gyro(0.0, 0.0);
+std::normal_distribution<double> noise_accel(0.0, 0.0);
 
 bool imuInitialized = false;
 double lastImuX = 0.0, lastImuY = 0.0, lastImuZ = 0.0;
