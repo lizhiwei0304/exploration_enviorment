@@ -1,10 +1,15 @@
 <launch>
 
-  <arg name="backend" default="fastlio" />
   <arg name="robot_namespace" default="vehicle0" />
 
+  <arg name="backend" default="fastlio" />
   <arg name="state_topic" default="/$(arg robot_namespace)/Odometry" />
   <arg name="cloud_topic" default="/$(arg robot_namespace)/cloud_registered" />
+
+  <!-- <arg name="backend" default="liosam" />
+  <arg name="state_topic" default="/lio_sam/mapping/odometry" />
+  <arg name="cloud_topic" default="/lio_sam/mapping/cloud_registered" /> -->
+
   <arg name="output_odom_topic" default="/$(arg robot_namespace)/state_estimation" />
   <arg name="output_cloud_topic" default="/$(arg robot_namespace)/registered_scan" />
 
@@ -14,7 +19,8 @@
   <arg name="send_tf" default="true" />
   <arg name="reverse_tf" default="false" />
 
-  <node pkg="loam_interface" type="loamInterface" name="loamInterface" output="screen" required="true">
+  <node pkg="loam_interface" type="loamInterface" name="loamInterface" output="screen"
+    required="true">
     <param name="backend" type="string" value="$(arg backend)" />
     <param name="robotNamespace" type="string" value="$(arg robot_namespace)" />
 
