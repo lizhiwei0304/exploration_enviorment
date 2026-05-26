@@ -658,7 +658,7 @@ int main(int argc, char **argv)
 
   ros::Subscriber subSpeed = nh.subscribe<geometry_msgs::TwistStamped>("cmd_vel", 5, speedHandler);
 
-  ros::Publisher pubVehicleOdom = nh.advertise<nav_msgs::Odometry>("state_estimation1", 5);
+  ros::Publisher pubVehicleOdom = nh.advertise<nav_msgs::Odometry>("state_estimation", 5);
   ros::Publisher pubImu = nh.advertise<sensor_msgs::Imu>(imu_topic, 200);
 
   nav_msgs::Odometry odomData;
