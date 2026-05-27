@@ -44,6 +44,9 @@
       <arg name="cameraOffsetZ" value="$(arg cameraOffsetZ)"/>
       <arg name="goalX" value="$(arg vehicleX1)"/>
       <arg name="goalY" value="$(arg vehicleY1)"/>
+      <arg name="localPlannerRate" value="100.0" />
+      <arg name="pathFollowerRate" value="100.0" />
+      <arg name="pathFollowerPubSkipNum" value="0" />
       <arg name="sensor_frame" default="$(arg namespace_1)/sensor"/>
       <arg name="vehicle_frame" default="$(arg namespace_1)/vehicle"/>
       <arg name="camera_frame" default="$(arg namespace_1)/camera"/>
@@ -56,17 +59,39 @@
     </include>
 
     <include file="$(find vehicle_simulator)/launch/vehicle_simulator.launch">
+      <arg name="namespace" value="$(arg namespace_1)" />
       <arg name="vehicleHeight" value="$(arg vehicleHeight)"/>
       <arg name="cameraOffsetZ" value="$(arg cameraOffsetZ)"/>
       <arg name="vehicleX" value="$(arg vehicleX1)"/>
       <arg name="vehicleY" value="$(arg vehicleY1)"/>
       <arg name="terrainZ" value="$(arg terrainZ1)"/>
       <arg name="vehicleYaw" value="$(arg vehicleYaw1)"/>
+      <arg name="adjustZ" value="false" />
+      <arg name="adjustIncl" value="false" />
       <arg name="sensor_frame" value="$(arg namespace_1)/sensor" />
       <arg name="robot_model_name" value="$(arg namespace_1)/robot" />
       <arg name="camera_model_name" value="$(arg namespace_1)/camera" />
       <arg name="vehicle_frame" default="$(arg namespace_1)/vehicle"/>
       <arg name="lidar_model_name" value="$(arg namespace_1)/lidar" />
+      <arg name="lidar_frame" value="$(arg namespace_1)/velodyne" />
+      <arg name="cmd_vel_timeout" value="1.0" />
+      <arg name="imu_gyro_noise_std" value="0.0" />
+      <arg name="imu_accel_noise_std" value="0.0" />
+      <arg name="imu_gyro_bias_x" value="0.0" />
+      <arg name="imu_gyro_bias_y" value="0.0" />
+      <arg name="imu_gyro_bias_z" value="0.0" />
+      <arg name="imu_accel_bias_x" value="0.0" />
+      <arg name="imu_accel_bias_y" value="0.0" />
+      <arg name="imu_accel_bias_z" value="0.0" />
+      <arg name="imu_time_offset" value="0.0" />
+      <arg name="publish_state_estimation" value="false" />
+      <arg name="publish_state_tf" value="false" />
+      <arg name="publish_registered_scan" value="false" />
+      <arg name="use_loam_interface" value="true" />
+      <arg name="slam_backend" value="fastlio" />
+      <arg name="slam_state_topic" value="/$(arg namespace_1)/Odometry" />
+      <arg name="slam_cloud_topic" value="/$(arg namespace_1)/cloud_registered" />
+      <arg name="slam_output_child_frame" value="$(arg namespace_1)/sensor" />
     </include>
 
     <include file="$(find sensor_scan_generation)/launch/sensor_scan_generation.launch">
@@ -78,6 +103,9 @@
     </include>
 
     <node launch-prefix="nice" pkg="rviz" type="rviz" name="rvizGA" args="-d $(find vehicle_simulator)/rviz/$(arg namespace_1).rviz" respawn="true"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="static_tf_sensor"
+      args="0 0 0 0 0 0 map $(arg namespace_1)/camera_init" />
 
     <!--include file="$(find ps3joy)/launch/ps3.launch" /-->
 
