@@ -119,12 +119,28 @@
     <param name="NameSpace" type="string" value="$(arg namespace)" />
     <param name="odom_suffix" value="state_estimation_at_scan" />
 
-    <param name="radius_xy" value="1.0" />
-    <param name="z_min_rel" value="-3.0" />
-    <param name="z_max_rel" value="3.0" />
+    <param name="vehicle_box_length" value="0.75" />
+    <param name="vehicle_box_width" value="0.55" />
+    <param name="vehicle_box_z_min_rel" value="-0.75" />
+    <param name="vehicle_box_z_max_rel" value="-0.25" />
+
+    <param name="filter_min_robot_distance" value="0.1" />
+    <param name="filter_visibility_range" value="90.0" />
+    <param name="filter_horizontal_fov_deg" value="360.0" />
+    <param name="filter_visibility_z_min_rel" value="-2.0" />
+    <param name="filter_visibility_z_max_rel" value="2.0" />
+    <param name="filter_visibility_bearing_tolerance_deg" value="4.0" />
+    <param name="filter_visibility_occlusion_margin" value="0.8" />
+    <param name="filter_visibility_support_range_margin" value="1.0" />
+    <param name="filter_visibility_min_points" value="1" />
+    <param name="filter_require_scan_support" value="true" />
+    <param name="filter_require_self_pose" value="true" />
 
     <param name="require_min_others" value="1" />
     <param name="max_pose_age_sec" value="1.0" />
+    <param name="pose_history_duration_sec" value="2.0" />
+    <param name="pose_window_padding_sec" value="0.05" />
+    <param name="first_cloud_pose_window_sec" value="0.2" />
 
     <param name="discovery_hz" value="10.0" />
   </node>

@@ -90,10 +90,15 @@
       <arg name="imu_accel_bias_y" value="0.0" />
       <arg name="imu_accel_bias_z" value="0.0" />
       <arg name="imu_time_offset" value="0.0" />
-      <arg name="publish_state_estimation" value="false" />
+      <arg name="publish_state_estimation" value="true" />
+      <arg name="publish_state_tf" value="true" />
+      <arg name="publish_registered_scan" value="true" />
+      <arg name="use_loam_interface" value="false" />
+
+      <!-- <arg name="publish_state_estimation" value="false" />
       <arg name="publish_state_tf" value="false" />
       <arg name="publish_registered_scan" value="false" />
-      <arg name="use_loam_interface" value="true" />
+      <arg name="use_loam_interface" value="true" /> -->
       <arg name="slam_backend" value="fastlio" />
       <arg name="slam_state_topic" value="/$(arg namespace_1)/Odometry" />
       <arg name="slam_cloud_topic" value="/$(arg namespace_1)/cloud_registered" />
