@@ -57,6 +57,12 @@ public:
     pose_window_padding_sec_ = pnh_.param<double>("pose_window_padding_sec", 0.05);
     first_cloud_pose_window_sec_ = pnh_.param<double>("first_cloud_pose_window_sec", 0.2);
 
+    // 用于包围盒删除的历史位姿窗口。
+    // 当 Viewpoint、odom 或点云存在延迟时，仅使用当前位姿会漏删机器人点云。
+    // 因此保留最近一段时间内的多个机器人位姿，每个位姿都作为一个删除包围盒。
+    bbox_filter_history_window_sec_ = pnh_.param<double>("bbox_filter_history_window_sec", 0.5);
+    bbox_filter_max_samples_per_robot_ = pnh_.param<int>("bbox_filter_max_samples_per_robot", 8);
+
     namespace_ = pnh_.param<std::string>("NameSpace", "vehicle0");
     self_id_ = ExtractRobotIDFromNamespace(namespace_);
 
@@ -98,6 +104,8 @@ public:
                     << " pose_history_duration_sec=" << pose_history_duration_sec_
                     << " pose_window_padding_sec=" << pose_window_padding_sec_
                     << " first_cloud_pose_window_sec=" << first_cloud_pose_window_sec_
+                    << "\n  bbox_filter_history_window_sec=" << bbox_filter_history_window_sec_
+                    << " bbox_filter_max_samples_per_robot=" << bbox_filter_max_samples_per_robot_
                     << "\n  discovery_hz=" << discovery_hz_);
   }
 
@@ -217,7 +225,6 @@ private:
     // 2) Get self pose and all other robot poses between adjacent cloud frames.
     const ros::Time cloud_stamp = cloud_msg->header.stamp.isZero() ? ros::Time::now() : cloud_msg->header.stamp;
     PoseCache self_pose;
-    std::unordered_map<int, std::vector<RobotPose>> other_pose_samples_by_robot;
     std::vector<RobotPose> other_poses;
     int known_other_robot_count = 0;
     {
@@ -225,21 +232,12 @@ private:
       if (!getClosestPose(self_pose_history_, cloud_stamp, self_pose))
         self_pose = self_pose_;
 
-      ros::Time window_start;
-      ros::Time window_end;
-      if (have_last_cloud_stamp_)
-      {
-        window_start = (last_cloud_stamp_ < cloud_stamp) ? last_cloud_stamp_ : cloud_stamp;
-        window_end = (last_cloud_stamp_ < cloud_stamp) ? cloud_stamp : last_cloud_stamp_;
-      }
-      else
-      {
-        window_start = cloud_stamp - ros::Duration(std::max(0.0, first_cloud_pose_window_sec_));
-        window_end = cloud_stamp;
-      }
+      // 使用更长的历史位姿窗口，而不是只使用当前 cloud interval 内的位姿。
+      // 这样可以覆盖 Viewpoint / odom / registered_scan 不同步造成的位置延迟。
       const ros::Duration padding(std::max(0.0, pose_window_padding_sec_));
-      window_start -= padding;
-      window_end += padding;
+      const ros::Duration history_window(std::max(0.0, bbox_filter_history_window_sec_));
+      ros::Time window_start = cloud_stamp - history_window - padding;
+      ros::Time window_end = cloud_stamp + padding;
 
       last_cloud_stamp_ = cloud_stamp;
       have_last_cloud_stamp_ = true;
@@ -251,14 +249,14 @@ private:
           continue;
 
         std::vector<RobotPose> samples =
-            getRobotPoseSamplesInWindow(kv.second, rid, window_start, window_end, cloud_stamp);
+            getRobotPoseSamplesForBBoxFiltering(kv.second, rid, window_start, window_end,
+                                                cloud_stamp, bbox_filter_max_samples_per_robot_);
         if (samples.empty())
         {
           continue;
         }
 
         ++known_other_robot_count;
-        other_pose_samples_by_robot[rid] = samples;
         other_poses.insert(other_poses.end(), samples.begin(), samples.end());
       }
     }
@@ -282,45 +280,22 @@ private:
       return;
     }
 
-    std::vector<RobotPose> visible_other_poses;
-    visible_other_poses.reserve(other_poses.size());
-    if (self_pose.valid)
-    {
-      const RobotPose self_robot_pose{Eigen::Vector3d(self_pose.x, self_pose.y, self_pose.z), self_pose.yaw, self_id_};
-      for (const auto &entry : other_pose_samples_by_robot)
-      {
-        bool robot_visible = false;
-        for (const RobotPose &other_pose : entry.second)
-        {
-          if (robotInCurrentSensorView(cloud, self_robot_pose, other_pose))
-          {
-            robot_visible = true;
-            break;
-          }
-        }
-        if (robot_visible)
-        {
-          visible_other_poses.insert(visible_other_poses.end(), entry.second.begin(), entry.second.end());
-        }
-      }
-    }
-    else
-    {
-      visible_other_poses = other_poses;
-    }
+    // 不再根据机器人间距离、FOV 或扫描支撑点判断“是否可见”。
+    // 只要存在其他机器人的位姿样本，就直接用该机器人车体包围盒删除落入盒内的点。
+    const std::vector<RobotPose> &filter_robot_poses = other_poses;
 
-    if (visible_other_poses.empty())
+    if (filter_robot_poses.empty())
     {
       ROS_WARN_STREAM_THROTTLE(1.0,
-                               "[AutoFilter] BYPASS (no visible other robots): known=" << other_poses.size());
+                               "[AutoFilter] BYPASS (no other robot pose samples): known=" << other_poses.size());
       pub_filtered_.publish(*cloud_msg);
       return;
     }
 
     const size_t before_sz = cloud->points.size();
 
-    // 3) Filter by an oriented vehicle body box around visible other robots.
-    RemovePointsNearRobots(cloud, visible_other_poses, vehicle_box_length_, vehicle_box_width_,
+    // 3) Filter by an oriented vehicle body box around other robots.
+    RemovePointsNearRobots(cloud, filter_robot_poses, vehicle_box_length_, vehicle_box_width_,
                            vehicle_box_z_min_rel_, vehicle_box_z_max_rel_);
 
     const size_t after_sz = cloud->points.size();
@@ -328,7 +303,7 @@ private:
     ROS_WARN_STREAM_THROTTLE(0.5,
                              "[AutoFilter] in=" << before_sz << " out=" << after_sz
                                                 << " removed=" << (before_sz > after_sz ? before_sz - after_sz : 0)
-                                                << " visible_pose_samples=" << visible_other_poses.size()
+                                                << " filter_pose_samples=" << filter_robot_poses.size()
                                                 << " pose_samples=" << other_poses.size()
                                                 << " known_robots=" << known_other_robot_count
                                                 << " frame=" << cloud_msg->header.frame_id);
@@ -425,6 +400,55 @@ private:
     return samples;
   }
 
+  std::vector<RobotPose> getRobotPoseSamplesForBBoxFiltering(const std::deque<PoseCache> &history,
+                                                              int robot_id,
+                                                              const ros::Time &window_start,
+                                                              const ros::Time &window_end,
+                                                              const ros::Time &cloud_stamp,
+                                                              int max_samples_per_robot) const
+  {
+    std::vector<PoseCache> selected_cache;
+    std::vector<RobotPose> samples;
+    if (history.empty())
+      return samples;
+
+    const int max_samples = std::max(1, max_samples_per_robot);
+
+    // 先从最新位姿向前取样。这样当历史窗口内位姿过多时，优先保留离当前点云时间最近的位置。
+    for (auto it = history.rbegin(); it != history.rend(); ++it)
+    {
+      const PoseCache &pose = *it;
+      if (!pose.valid)
+        continue;
+      if (pose.stamp < window_start || pose.stamp > window_end)
+        continue;
+
+      selected_cache.push_back(pose);
+      if (static_cast<int>(selected_cache.size()) >= max_samples)
+        break;
+    }
+
+    // 如果窗口内没有采到位姿，则退化为使用最新且不过期的位姿。
+    if (selected_cache.empty())
+    {
+      const PoseCache &latest_pose = history.back();
+      if (poseFresh(latest_pose, cloud_stamp, max_pose_age_sec_))
+      {
+        selected_cache.push_back(latest_pose);
+      }
+    }
+
+    // 反转为时间从旧到新，便于日志理解；实际滤波不依赖顺序。
+    std::reverse(selected_cache.begin(), selected_cache.end());
+    samples.reserve(selected_cache.size());
+    for (const PoseCache &pose : selected_cache)
+    {
+      samples.push_back(toRobotPose(pose, robot_id));
+    }
+
+    return samples;
+  }
+
   // ============================ Filtering function ============================
   static void RemovePointsNearRobots(
       pcl::PointCloud<pcl::PointXYZI>::Ptr &cloud,
@@ -488,7 +512,9 @@ private:
   {
     const Eigen::Vector3d delta = other_pose.position - self_pose.position;
     const double range_xy = std::hypot(delta.x(), delta.y());
-    if (range_xy <= filter_min_robot_distance_ || range_xy > filter_visibility_range_)
+    // 注意：这里不再因为机器人距离过近而判定不可见。
+    // 近距离时仍应允许后续包围盒滤除机器人自身点云。
+    if (range_xy > filter_visibility_range_)
       return false;
 
     const double z_rel = delta.z();
@@ -643,6 +669,8 @@ private:
   double pose_history_duration_sec_{2.0};
   double pose_window_padding_sec_{0.05};
   double first_cloud_pose_window_sec_{0.2};
+  double bbox_filter_history_window_sec_{0.5};
+  int bbox_filter_max_samples_per_robot_{8};
   int self_id_{0};
   double discovery_hz_{2.0};
 

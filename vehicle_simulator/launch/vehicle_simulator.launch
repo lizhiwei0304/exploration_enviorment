@@ -116,31 +116,43 @@
   <node pkg="vehicle_simulator" type="registered_scan_auto_filter_node"
     name="registered_scan_auto_filter_node" output="screen"
     required="true">
+
     <param name="NameSpace" type="string" value="$(arg namespace)" />
     <param name="odom_suffix" value="state_estimation_at_scan" />
 
-    <param name="vehicle_box_length" value="0.75" />
-    <param name="vehicle_box_width" value="0.55" />
-    <param name="vehicle_box_z_min_rel" value="-0.75" />
-    <param name="vehicle_box_z_max_rel" value="-0.25" />
+    <!-- 机器人车体包围盒尺寸：建议适当放大，避免边缘点删不掉 -->
+    <param name="vehicle_box_length" value="0.86" />
+    <param name="vehicle_box_width" value="0.66" />
+    <param name="vehicle_box_z_min_rel" value="-1.0" />
+    <param name="vehicle_box_z_max_rel" value="1.0" />
 
-    <param name="filter_min_robot_distance" value="0.1" />
+    <!-- 历史位姿包围盒删除：用于补偿 Viewpoint / odom / 点云时间延迟 -->
+    <param name="bbox_filter_history_window_sec" value="0.5" />
+    <param name="bbox_filter_max_samples_per_robot" value="20" />
+
+    <!-- 下面这些可见性参数在新版 bbox-only 逻辑中基本不再起主要作用，保留是为了兼容 -->
+    <param name="filter_min_robot_distance" value="0.0" />
     <param name="filter_visibility_range" value="90.0" />
     <param name="filter_horizontal_fov_deg" value="360.0" />
-    <param name="filter_visibility_z_min_rel" value="-2.0" />
-    <param name="filter_visibility_z_max_rel" value="2.0" />
-    <param name="filter_visibility_bearing_tolerance_deg" value="4.0" />
-    <param name="filter_visibility_occlusion_margin" value="0.8" />
-    <param name="filter_visibility_support_range_margin" value="1.0" />
+    <param name="filter_visibility_z_min_rel" value="-3.0" />
+    <param name="filter_visibility_z_max_rel" value="3.0" />
+    <param name="filter_visibility_bearing_tolerance_deg" value="8.0" />
+    <param name="filter_visibility_occlusion_margin" value="0.0" />
+    <param name="filter_visibility_support_range_margin" value="1.5" />
     <param name="filter_visibility_min_points" value="1" />
-    <param name="filter_require_scan_support" value="true" />
+
+    <!-- 关键：不要再依赖点云支撑判断，否则延迟时容易误判不可见 -->
+    <param name="filter_require_scan_support" value="false" />
     <param name="filter_require_self_pose" value="true" />
 
+    <!-- 至少需要发现一个其他机器人位姿，否则原样发布 -->
     <param name="require_min_others" value="1" />
-    <param name="max_pose_age_sec" value="1.0" />
-    <param name="pose_history_duration_sec" value="2.0" />
-    <param name="pose_window_padding_sec" value="0.05" />
-    <param name="first_cloud_pose_window_sec" value="0.2" />
+
+    <!-- 位姿缓存时间必须大于 bbox_filter_history_window_sec -->
+    <param name="max_pose_age_sec" value="1.5" />
+    <param name="pose_history_duration_sec" value="3.0" />
+    <param name="pose_window_padding_sec" value="0.10" />
+    <param name="first_cloud_pose_window_sec" value="0.5" />
 
     <param name="discovery_hz" value="10.0" />
   </node>
