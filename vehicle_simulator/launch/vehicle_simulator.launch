@@ -128,7 +128,7 @@
 
     <!-- 历史位姿包围盒删除：用于补偿 Viewpoint / odom / 点云时间延迟 -->
     <param name="bbox_filter_history_window_sec" value="0.5" />
-    <param name="bbox_filter_max_samples_per_robot" value="50中" />
+    <param name="bbox_filter_max_samples_per_robot" value="50" />
 
     <!-- 下面这些可见性参数在新版 bbox-only 逻辑中基本不再起主要作用，保留是为了兼容 -->
     <param name="filter_min_robot_distance" value="0.0" />
