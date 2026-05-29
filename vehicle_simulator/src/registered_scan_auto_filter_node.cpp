@@ -48,7 +48,7 @@ public:
     filter_visibility_support_range_margin_ = pnh_.param<double>("filter_visibility_support_range_margin", 1.0);
     filter_visibility_min_points_ = pnh_.param<int>("filter_visibility_min_points", 1);
     filter_require_scan_support_ = pnh_.param<bool>("filter_require_scan_support", true);
-    filter_require_self_pose_ = pnh_.param<bool>("filter_require_self_pose", true);
+    filter_require_self_pose_ = pnh_.param<bool>("filter_require_self_pose", false);
 
     require_min_others_ = pnh_.param<int>("require_min_others", 1);
 
@@ -80,8 +80,8 @@ public:
 
     sub_cloud_ = nh_.subscribe("registered_scan", 1, &RegisteredScanAutoFilter::cloudCb, this,
                                ros::TransportHints().tcpNoDelay(true));
-    sub_self_odom_ = nh_.subscribe<nav_msgs::Odometry>(odom_suffix_, 5, &RegisteredScanAutoFilter::selfOdomCb,
-                                                       this, ros::TransportHints().tcpNoDelay(true));
+    // 注意：包围盒删除只依赖“其他机器人”的位姿，不再订阅或检查自身 odom。
+    // 自身位姿一旦延迟或丢失，不应该导致其他机器人点云过滤被 bypass。
 
     // ---- start discovery thread ----
     running_.store(true);
@@ -98,7 +98,7 @@ public:
                     << "\n  filter_visibility_range=" << filter_visibility_range_
                     << " filter_horizontal_fov_deg=" << rad2deg(filter_horizontal_fov_rad_)
                     << " filter_require_scan_support=" << filter_require_scan_support_
-                    << " filter_require_self_pose=" << filter_require_self_pose_
+                    << " filter_require_self_pose=" << filter_require_self_pose_ << " (ignored in bbox-only mode)"
                     << "\n  require_min_others=" << require_min_others_
                     << "\n  max_pose_age_sec=" << max_pose_age_sec_
                     << " pose_history_duration_sec=" << pose_history_duration_sec_
@@ -222,15 +222,13 @@ private:
     if (!cloud || cloud->points.empty())
       return;
 
-    // 2) Get self pose and all other robot poses between adjacent cloud frames.
+    // 2) Get only other robot poses for bbox filtering.
+    // 删除点云时不能依赖自身位置：只要有其他机器人 odom，就用其他机器人的历史包围盒过滤。
     const ros::Time cloud_stamp = cloud_msg->header.stamp.isZero() ? ros::Time::now() : cloud_msg->header.stamp;
-    PoseCache self_pose;
     std::vector<RobotPose> other_poses;
     int known_other_robot_count = 0;
     {
       std::lock_guard<std::mutex> lk(mtx_);
-      if (!getClosestPose(self_pose_history_, cloud_stamp, self_pose))
-        self_pose = self_pose_;
 
       // 使用更长的历史位姿窗口，而不是只使用当前 cloud interval 内的位姿。
       // 这样可以覆盖 Viewpoint / odom / registered_scan 不同步造成的位置延迟。
@@ -261,13 +259,8 @@ private:
       }
     }
 
-    if (filter_require_self_pose_ &&
-        (!self_pose.valid || !poseFresh(self_pose, cloud_stamp, max_pose_age_sec_)))
-    {
-      ROS_WARN_STREAM_THROTTLE(1.0, "[AutoFilter] BYPASS (no fresh self pose)");
-      pub_filtered_.publish(*cloud_msg);
-      return;
-    }
+    // 不再检查自身位姿新鲜度。
+    // 原先这里会因为 self_pose 不新鲜直接 bypass，导致其他机器人包围盒过滤不执行。
 
     if (require_min_others_ > 0 && known_other_robot_count < require_min_others_)
     {
