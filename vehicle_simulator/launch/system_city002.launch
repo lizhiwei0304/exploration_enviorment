@@ -3,23 +3,23 @@
 
   <arg name="namespace_1" default="vehicle0" />
   <arg name="vehicleX1" default="0" />
-  <arg name="vehicleY1" default="0" />
+  <arg name="vehicleY1" default="10.0" />
   <arg name="terrainZ1" default="0" />
   <arg name="vehicleYaw1" default="0" />
 
   <arg name="namespace_2" default="vehicle1" />
-  <arg name="vehicleX2" default="12.0" />
-  <arg name="vehicleY2" default="0" />
+  <arg name="vehicleX2" default="0.0" />
+  <arg name="vehicleY2" default="15.0" />
   <arg name="terrainZ2" default="0" />
   <arg name="vehicleYaw2" default="0" />
 
   <arg name="namespace_3" default="vehicle2" />
-  <arg name="vehicleX3" default="24.0" />
-  <arg name="vehicleY3" default="0" />
+  <arg name="vehicleX3" default="0.0" />
+  <arg name="vehicleY3" default="20.0" />
   <arg name="terrainZ3" default="0" />
   <arg name="vehicleYaw3" default="0" />
 
-  <arg name="world_name" default="indoor" />
+  <arg name="world_name" default="city002" />
   <arg name="vehicleHeight" default="0.75" />
   <arg name="cameraOffsetZ" default="0" />
   <arg name="checkTerrainConn" default="true" />

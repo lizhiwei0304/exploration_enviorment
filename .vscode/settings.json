@@ -104,5 +104,6 @@
         "core": "cpp",
         "numericaldiff": "cpp",
         "specialfunctions": "cpp"
-    }
+    },
+    "ros.distro": "humble"
 }

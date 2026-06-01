@@ -2,24 +2,24 @@
 <launch>
 
   <arg name="namespace_1" default="vehicle0" />
-  <arg name="vehicleX1" default="0" />
+  <arg name="vehicleX1" default="5.0" />
   <arg name="vehicleY1" default="0" />
   <arg name="terrainZ1" default="0" />
   <arg name="vehicleYaw1" default="0" />
 
   <arg name="namespace_2" default="vehicle1" />
-  <arg name="vehicleX2" default="12.0" />
-  <arg name="vehicleY2" default="0" />
+  <arg name="vehicleX2" default="5.0" />
+  <arg name="vehicleY2" default="10.0" />
   <arg name="terrainZ2" default="0" />
   <arg name="vehicleYaw2" default="0" />
 
   <arg name="namespace_3" default="vehicle2" />
-  <arg name="vehicleX3" default="24.0" />
-  <arg name="vehicleY3" default="0" />
+  <arg name="vehicleX3" default="5.0" />
+  <arg name="vehicleY3" default="-10.0" />
   <arg name="terrainZ3" default="0" />
   <arg name="vehicleYaw3" default="0" />
 
-  <arg name="world_name" default="indoor" />
+  <arg name="world_name" default="factory" />
   <arg name="vehicleHeight" default="0.75" />
   <arg name="cameraOffsetZ" default="0" />
   <arg name="checkTerrainConn" default="true" />
@@ -29,7 +29,7 @@
   <arg name="headless" default="false" />
   <arg name="debug" default="false" />
   <arg name="verbose" default="false" />
-  <arg name="gui" default="true" />
+  <arg name="gui" default="false" />
 
   <include file="$(find vehicle_simulator)/launch/empty_world.launch">
     <arg name="paused" value="$(arg paused)" />
