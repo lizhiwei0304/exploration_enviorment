@@ -35,3 +35,4 @@ vehicle_simulator/mesh/matterport/preview/*
 !vehicle_simulator/mesh/download.html
 
 !readme.txt
+vehicle_simulator/log/
