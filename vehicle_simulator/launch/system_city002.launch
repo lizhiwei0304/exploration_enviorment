@@ -29,7 +29,7 @@
   <arg name="headless" default="false" />
   <arg name="debug" default="false" />
   <arg name="verbose" default="false" />
-  <arg name="gui" default="true" />
+  <arg name="gui" default="false" />
 
   <include file="$(find vehicle_simulator)/launch/empty_world.launch">
     <arg name="paused" value="$(arg paused)" />
