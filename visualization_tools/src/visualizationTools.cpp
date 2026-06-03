@@ -31,11 +31,14 @@ const double PI = 3.1415926;
 string metricFile;                    // 输出探索空间的各项参数的文件路径
 string trajFile;                      // 输出探索轨迹的文件路径
 string mapFile;                       // 输入地图信息文件的路径
+string odometryTopic = "state_estimation";
+string laserCloudTopic = "registered_scan_filted";
+string runtimeTopic = "runtime";
 double overallMapVoxelSize = 0.5;     // 表示总体地图体素的尺寸
 double exploredAreaVoxelSize = 0.3;   // 表示探索空间体素的尺寸
 double exploredVolumeVoxelSize = 0.5; // 表示探索体积提速的尺寸
 double transInterval = 0.2;           // 表示探索时间间隔
-double yawInterval = 10.0;            // 表示航向时间间隔
+double yawInterval = 10.0;            // 表示航向角间隔，单位：degree
 int overallMapDisplayInterval = 2;    // 全局地图显示时间间隔
 int overallMapDisplayCount = 0;       // 全局地图显示计数
 int exploredAreaDisplayInterval = 1;  // 探索空间显示时间间隔
@@ -56,6 +59,7 @@ bool systemDelayInited = false; // 系统延时初始化
 double systemTime = 0;          // 系统时间
 double systemInitTime = 0;      // 系统初始化时间
 bool systemInited = false;      // 系统初始化标志
+bool odometryInited = false;    // 里程计初始化标志
 
 float vehicleYaw = 0;
 float vehicleX = 0, vehicleY = 0, vehicleZ = 0;
@@ -76,6 +80,30 @@ ros::Publisher *pubTimeDurationPtr = NULL;
 FILE *metricFilePtr = NULL;
 FILE *trajFilePtr = NULL;
 
+void publishTrajectoryPoint(double roll, double pitch, double yaw, const ros::Time &stamp)
+{
+  if (trajFilePtr != NULL)
+  {
+    fprintf(trajFilePtr, "%f %f %f %f %f %f %f\n", vehicleX, vehicleY, vehicleZ, roll, pitch, yaw, timeDuration);
+  }
+
+  pcl::PointXYZI point;
+  point.x = vehicleX;
+  point.y = vehicleY;
+  point.z = vehicleZ;
+  point.intensity = travelingDis;
+  trajectory->push_back(point);
+
+  if (pubTrajectoryPtr != NULL)
+  {
+    sensor_msgs::PointCloud2 trajectory2;
+    pcl::toROSMsg(*trajectory, trajectory2);
+    trajectory2.header.stamp = stamp;
+    trajectory2.header.frame_id = "map";
+    pubTrajectoryPtr->publish(trajectory2);
+  }
+}
+
 void odometryHandler(const nav_msgs::Odometry::ConstPtr &odom)
 {
   systemTime = odom->header.stamp.toSec();
@@ -94,12 +122,17 @@ void odometryHandler(const nav_msgs::Odometry::ConstPtr &odom)
   float dz = odom->pose.pose.position.z - vehicleZ;
   float dis = sqrt(dx * dx + dy * dy + dz * dz);
 
-  if (!systemDelayInited)
+  if (!odometryInited)
   {
     vehicleYaw = yaw;
     vehicleX = odom->pose.pose.position.x;
     vehicleY = odom->pose.pose.position.y;
     vehicleZ = odom->pose.pose.position.z;
+    systemInitTime = systemTime;
+    systemInited = true;
+    odometryInited = true;
+    timeDuration = 0;
+    publishTrajectoryPoint(roll, pitch, yaw, odom->header.stamp);
     return;
   }
 
@@ -118,13 +151,6 @@ void odometryHandler(const nav_msgs::Odometry::ConstPtr &odom)
     return;
   }
 
-  if (!systemInited)
-  {
-    dis = 0;
-    systemInitTime = systemTime;
-    systemInited = true;
-  }
-
   travelingDis += dis;
 
   vehicleYaw = yaw;
@@ -132,23 +158,8 @@ void odometryHandler(const nav_msgs::Odometry::ConstPtr &odom)
   vehicleY = odom->pose.pose.position.y;
   vehicleZ = odom->pose.pose.position.z;
 
-  // 输出以下参数，具体路径看launch中关于trajFilePtr的取值
-  fprintf(trajFilePtr, "%f %f %f %f %f %f %f\n", vehicleX, vehicleY, vehicleZ, roll, pitch, yaw, timeDuration);
-
-  pcl::PointXYZI point;
-  point.x = vehicleX;
-  point.y = vehicleY;
-  point.z = vehicleZ;
-  point.intensity = travelingDis;
-  // std::cout << "point.intensity = "<< point.intensity <<std::endl;
-  trajectory->push_back(point);
-
   // 发布运动轨迹
-  sensor_msgs::PointCloud2 trajectory2;
-  pcl::toROSMsg(*trajectory, trajectory2);
-  trajectory2.header.stamp = odom->header.stamp;
-  trajectory2.header.frame_id = "map";
-  pubTrajectoryPtr->publish(trajectory2);
+  publishTrajectoryPoint(roll, pitch, yaw, odom->header.stamp);
 }
 
 void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudIn)
@@ -162,7 +173,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudIn)
     }
   }
 
-  if (!systemInited)
+  if (!systemDelayInited || !systemInited)
   {
     return;
   }
@@ -211,7 +222,10 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudIn)
   }
 
   // 输出上述参数，具体文件路径看launch中关于metricFilePtr的值
-  fprintf(metricFilePtr, "%f %f %f %f\n", exploredVolume, travelingDis, runtime, timeDuration);
+  if (metricFilePtr != NULL)
+  {
+    fprintf(metricFilePtr, "%f %f %f %f\n", exploredVolume, travelingDis, runtime, timeDuration);
+  }
 
   // 发布探索体积
   std_msgs::Float32 exploredVolumeMsg;
@@ -239,6 +253,9 @@ int main(int argc, char **argv)
   nhPrivate.getParam("metricFile", metricFile);
   nhPrivate.getParam("trajFile", trajFile);
   nhPrivate.getParam("mapFile", mapFile);
+  nhPrivate.param<string>("odometryTopic", odometryTopic, odometryTopic);
+  nhPrivate.param<string>("laserCloudTopic", laserCloudTopic, laserCloudTopic);
+  nhPrivate.param<string>("runtimeTopic", runtimeTopic, runtimeTopic);
   nhPrivate.getParam("overallMapVoxelSize", overallMapVoxelSize);
   nhPrivate.getParam("exploredAreaVoxelSize", exploredAreaVoxelSize);
   nhPrivate.getParam("exploredVolumeVoxelSize", exploredVolumeVoxelSize);
@@ -246,21 +263,22 @@ int main(int argc, char **argv)
   nhPrivate.getParam("yawInterval", yawInterval);
   nhPrivate.getParam("overallMapDisplayInterval", overallMapDisplayInterval);
   nhPrivate.getParam("exploredAreaDisplayInterval", exploredAreaDisplayInterval);
+  yawInterval *= PI / 180.0;
 
-  ros::Subscriber subOdometry = nh.subscribe<nav_msgs::Odometry>("state_estimation", 5, odometryHandler);
-  ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("registered_scan_filted", 5, laserCloudHandler);
+  ros::Subscriber subOdometry = nh.subscribe<nav_msgs::Odometry>(odometryTopic, 5, odometryHandler);
+  ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>(laserCloudTopic, 5, laserCloudHandler);
 
   // ros::Subscriber subOdometry = nh.subscribe<nav_msgs::Odometry>("state_estimation_noisy", 5, odometryHandler);
   // ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("transformed_cloud", 5, laserCloudHandler);
 
-  ros::Subscriber subRuntime = nh.subscribe<std_msgs::Float32>("runtime", 5, runtimeHandler);
+  ros::Subscriber subRuntime = nh.subscribe<std_msgs::Float32>(runtimeTopic, 5, runtimeHandler);
 
   ros::Publisher pubOverallMap = nh.advertise<sensor_msgs::PointCloud2>("overall_map", 5);
 
   ros::Publisher pubExploredArea = nh.advertise<sensor_msgs::PointCloud2>("explored_areas", 5);
   pubExploredAreaPtr = &pubExploredArea;
 
-  ros::Publisher pubTrajectory = nh.advertise<sensor_msgs::PointCloud2>("trajectory", 5);
+  ros::Publisher pubTrajectory = nh.advertise<sensor_msgs::PointCloud2>("trajectory", 5, true);
   pubTrajectoryPtr = &pubTrajectory;
 
   ros::Publisher pubExploredVolume = nh.advertise<std_msgs::Float32>("explored_volume", 5);
@@ -297,17 +315,30 @@ int main(int argc, char **argv)
                       to_string(ltm->tm_hour) + "-" + to_string(ltm->tm_min) + "-" + to_string(ltm->tm_sec);
 
   std::string robot_ns = ros::this_node::getNamespace(); // 获取命名空间
-  if (robot_ns.front() == '/')                           // 去掉前导斜杠
+  if (!robot_ns.empty() && robot_ns.front() == '/')       // 去掉前导斜杠
     robot_ns = robot_ns.substr(1);
+  if (robot_ns.empty())
+    robot_ns = "global";
 
   // 输出文件路径调试信息
   ROS_INFO_STREAM("[metricFile] " << metricFile);
   ROS_INFO_STREAM("[trajFile] " << trajFile);
+  ROS_INFO_STREAM("[odometryTopic] " << odometryTopic);
+  ROS_INFO_STREAM("[laserCloudTopic] " << laserCloudTopic);
+  ROS_INFO_STREAM("[runtimeTopic] " << runtimeTopic);
 
   metricFile += "/" + robot_ns + "_" + timeString + ".txt";
   trajFile += "/" + robot_ns + "_" + timeString + ".txt";
   metricFilePtr = fopen(metricFile.c_str(), "w");
   trajFilePtr = fopen(trajFile.c_str(), "w");
+  if (metricFilePtr == NULL)
+  {
+    ROS_ERROR_STREAM("Failed to open metric file: " << metricFile);
+  }
+  if (trajFilePtr == NULL)
+  {
+    ROS_ERROR_STREAM("Failed to open trajectory file: " << trajFile);
+  }
 
   ros::Rate rate(100);
   bool status = ros::ok();
@@ -330,8 +361,14 @@ int main(int argc, char **argv)
     rate.sleep();
   }
 
-  fclose(metricFilePtr);
-  fclose(trajFilePtr);
+  if (metricFilePtr != NULL)
+  {
+    fclose(metricFilePtr);
+  }
+  if (trajFilePtr != NULL)
+  {
+    fclose(trajFilePtr);
+  }
 
   printf("\nExploration metrics and vehicle trajectory are saved in 'src/vehicle_simulator/log'.\n\n");
 
